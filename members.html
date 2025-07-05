@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メンバー・機材管理 👥 | バンド活動</title>
+    
+    <!-- ファビコン設定 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>👥</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>👥</text></svg>">
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        body { 
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: #0f172a;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(34, 197, 94, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(20, 184, 166, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(16, 185, 129, 0.2) 0%, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .member-card {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .member-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(34, 197, 94, 0.3);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+        
+        .equipment-card {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            padding: 16px;
+        }
+        
+        .equipment-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .member-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+        
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+            margin: 2px;
+        }
+        
+        .contact-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 0.875rem;
+            margin: 4px;
+        }
+        
+        .equipment-type-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+        
+        .status-available {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        
+        .status-lending {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fde047;
+        }
+        
+        .status-maintenance {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #22c55e 0%, #14b8a6 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-content {
+            animation: slideUp 0.3s ease;
+        }
+        
+        .tab-button {
+            padding: 12px 24px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tab-button.active {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+        
+        .lending-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 24px;
+            padding-bottom: 16px;
+            border-left: 2px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .timeline-item:last-child {
+            border-left: none;
+        }
+        
+        .timeline-dot {
+            position: absolute;
+            left: -6px;
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        
+        /* スクロールバー */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #22c55e, #14b8a6);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #16a34a, #0d9488);
+        }
+    </style>
+</head>
+<body>
+    <div id="root">読み込み中...</div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Firebaseの設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+            authDomain: "band-apps.firebaseapp.com",
+            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+            projectId: "band-apps",
+            storageBucket: "band-apps.firebasestorage.app",
+            messagingSenderId: "238355659055",
+            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+            measurementId: "G-T5ZYHTSS3L"
+        };
+
+        // Firebase初期化
+        let firebaseInitialized = false;
+        let database = null;
+
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+            }
+        } catch (error) {
+            console.error("Firebase初期化エラー:", error);
+        }
+
+        const MembersApp = () => {
+            const [members, setMembers] = useState({});
+            const [equipment, setEquipment] = useState({});
+            const [lendingRecords, setLendingRecords] = useState({});
+            const [selectedMember, setSelectedMember] = useState(null);
+            const [showNewMemberModal, setShowNewMemberModal] = useState(false);
+            const [showNewEquipmentModal, setShowNewEquipmentModal] = useState(false);
+            const [showLendingModal, setShowLendingModal] = useState(false);
+            const [activeTab, setActiveTab] = useState('members');
+            const [connectionStatus, setConnectionStatus] = useState('確認中...');
+            const [currentUser, setCurrentUser] = useState('');
+            const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+
+            // 初期メンバーデータ
+            const initialMembers = {
+                'sola': {
+                    id: 'sola',
+                    name: 'sola',
+                    role: 'ボーカル',
+                    instruments: ['🎤'],
+                    joinDate: '2020-04-01',
+                    contact: {
+                        phone: '090-xxxx-xxxx',
+                        email: 'sola@band.com',
+                        line: 'sola_line'
+                    },
+                    notes: 'リーダー。作詞担当。'
+                },
+                'ししまる': {
+                    id: 'ししまる',
+                    name: 'ししまる',
+                    role: 'ギター',
+                    instruments: ['🎸'],
+                    joinDate: '2020-04-01',
+                    contact: {
+                        phone: '090-yyyy-yyyy',
+                        email: 'shishimaru@band.com',
+                        line: 'shishi_guitar'
+                    },
+                    notes: '作曲担当。エフェクター収集家。'
+                },
+                'まり': {
+                    id: 'まり',
+                    name: 'まり',
+                    role: 'ベース',
+                    instruments: ['🎵'],
+                    joinDate: '2020-04-01',
+                    contact: {
+                        phone: '090-zzzz-zzzz',
+                        email: 'mari@band.com',
+                        line: 'mari_bass'
+                    },
+                    notes: '会計担当。'
+                },
+                'なかしゅん': {
+                    id: 'なかしゅん',
+                    name: 'なかしゅん',
+                    role: 'キーボード',
+                    instruments: ['🎹'],
+                    joinDate: '2020-05-01',
+                    contact: {
+                        phone: '090-aaaa-aaaa',
+                        email: 'nakashun@band.com',
+                        line: 'nakashun_key'
+                    },
+                    notes: 'アレンジ担当。DTMマスター。'
+                },
+                'あつしんぐ': {
+                    id: 'あつしんぐ',
+                    name: 'あつしんぐ',
+                    role: 'ドラム',
+                    instruments: ['🥁'],
+                    joinDate: '2020-06-01',
+                    contact: {
+                        phone: '090-bbbb-bbbb',
+                        email: 'atsushing@band.com',
+                        line: 'atsushing_drums'
+                    },
+                    notes: 'ムードメーカー。車持ち。'
+                }
+            };
+
+            // 機材タイプ
+            const equipmentTypes = [
+                { id: 'guitar', label: 'ギター', icon: '🎸' },
+                { id: 'bass', label: 'ベース', icon: '🎵' },
+                { id: 'keyboard', label: 'キーボード', icon: '🎹' },
+                { id: 'drums', label: 'ドラム', icon: '🥁' },
+                { id: 'mic', label: 'マイク', icon: '🎤' },
+                { id: 'amp', label: 'アンプ', icon: '🔊' },
+                { id: 'effect', label: 'エフェクター', icon: '🎛️' },
+                { id: 'cable', label: 'ケーブル', icon: '🔌' },
+                { id: 'other', label: 'その他', icon: '📦' }
+            ];
+
+            // Firebase接続
+            useEffect(() => {
+                if (!firebaseInitialized || !database) {
+                    setConnectionStatus('ローカルモード');
+                    // ローカルストレージから読み込み
+                    const savedMembers = localStorage.getItem('bandMembers');
+                    const savedEquipment = localStorage.getItem('bandEquipment');
+                    const savedLending = localStorage.getItem('bandLending');
+                    const savedUser = localStorage.getItem('bandCurrentUser');
+                    
+                    if (savedMembers) {
+                        setMembers(JSON.parse(savedMembers));
+                    } else {
+                        setMembers(initialMembers);
+                    }
+                    
+                    if (savedEquipment) setEquipment(JSON.parse(savedEquipment));
+                    if (savedLending) setLendingRecords(JSON.parse(savedLending));
+                    if (savedUser) setCurrentUser(savedUser);
+                    return;
+                }
+
+                // オンライン状態の管理
+                const presenceRef = database.ref('.info/connected');
+                const userRef = database.ref(`presence/${sessionId}`);
+                
+                presenceRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        userRef.set(true);
+                        userRef.onDisconnect().remove();
+                        setConnectionStatus('オンライン');
+                    } else {
+                        setConnectionStatus('オフライン');
+                    }
+                });
+
+                // メンバーデータの監視
+                const membersRef = database.ref('members');
+                membersRef.on('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        setMembers(data);
+                    } else {
+                        // 初回は初期データを設定
+                        database.ref('members').set(initialMembers);
+                    }
+                });
+
+                // 機材データの監視
+                const equipmentRef = database.ref('equipment');
+                equipmentRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setEquipment(data);
+                });
+
+                // 貸し借りデータの監視
+                const lendingRef = database.ref('lending');
+                lendingRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setLendingRecords(data);
+                });
+
+                return () => {
+                    if (database) {
+                        presenceRef.off();
+                        membersRef.off();
+                        equipmentRef.off();
+                        lendingRef.off();
+                        userRef.remove();
+                    }
+                };
+            }, [sessionId]);
+
+            // ローカルストレージへの保存
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandMembers', JSON.stringify(members));
+                }
+            }, [members]);
+
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandEquipment', JSON.stringify(equipment));
+                }
+            }, [equipment]);
+
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandLending', JSON.stringify(lendingRecords));
+                }
+            }, [lendingRecords]);
+
+            useEffect(() => {
+                localStorage.setItem('bandCurrentUser', currentUser);
+            }, [currentUser]);
+
+            // メンバー情報を更新
+            const updateMember = (memberId, memberData) => {
+                if (firebaseInitialized && database) {
+                    database.ref(`members/${memberId}`).update(memberData);
+                } else {
+                    setMembers(prev => ({
+                        ...prev,
+                        [memberId]: { ...prev[memberId], ...memberData }
+                    }));
+                }
+            };
+
+            // 機材を追加
+            const addEquipment = (equipmentData) => {
+                const id = Date.now().toString();
+                const newEquipment = {
+                    id,
+                    ...equipmentData,
+                    status: 'available',
+                    addedAt: Date.now()
+                };
+
+                if (firebaseInitialized && database) {
+                    database.ref(`equipment/${id}`).set(newEquipment);
+                } else {
+                    setEquipment(prev => ({ ...prev, [id]: newEquipment }));
+                }
+
+                setShowNewEquipmentModal(false);
+            };
+
+            // 機材を削除
+            const deleteEquipment = (equipmentId) => {
+                if (confirm('この機材を削除しますか？')) {
+                    if (firebaseInitialized && database) {
+                        database.ref(`equipment/${equipmentId}`).remove();
+                    } else {
+                        const newEquipment = { ...equipment };
+                        delete newEquipment[equipmentId];
+                        setEquipment(newEquipment);
+                    }
+                }
+            };
+
+            // 貸し借りを記録
+            const recordLending = (lendingData) => {
+                const id = Date.now().toString();
+                const record = {
+                    id,
+                    ...lendingData,
+                    date: Date.now(),
+                    status: 'active'
+                };
+
+                // 機材のステータスを更新
+                if (firebaseInitialized && database) {
+                    database.ref(`equipment/${lendingData.equipmentId}/status`).set('lending');
+                    database.ref(`equipment/${lendingData.equipmentId}/currentBorrower`).set(lendingData.borrower);
+                    database.ref(`lending/${id}`).set(record);
+                } else {
+                    setEquipment(prev => ({
+                        ...prev,
+                        [lendingData.equipmentId]: {
+                            ...prev[lendingData.equipmentId],
+                            status: 'lending',
+                            currentBorrower: lendingData.borrower
+                        }
+                    }));
+                    setLendingRecords(prev => ({ ...prev, [id]: record }));
+                }
+
+                setShowLendingModal(false);
+            };
+
+            // 返却処理
+            const returnEquipment = (lendingId, equipmentId) => {
+                if (firebaseInitialized && database) {
+                    database.ref(`equipment/${equipmentId}/status`).set('available');
+                    database.ref(`equipment/${equipmentId}/currentBorrower`).remove();
+                    database.ref(`lending/${lendingId}/status`).set('returned');
+                    database.ref(`lending/${lendingId}/returnDate`).set(Date.now());
+                } else {
+                    setEquipment(prev => ({
+                        ...prev,
+                        [equipmentId]: {
+                            ...prev[equipmentId],
+                            status: 'available',
+                            currentBorrower: null
+                        }
+                    }));
+                    setLendingRecords(prev => ({
+                        ...prev,
+                        [lendingId]: {
+                            ...prev[lendingId],
+                            status: 'returned',
+                            returnDate: Date.now()
+                        }
+                    }));
+                }
+            };
+
+            // メンバーのイニシャルを取得
+            const getInitial = (name) => {
+                return name ? name.charAt(0).toUpperCase() : '?';
+            };
+
+            // メンバー詳細モーダル
+            const MemberDetailModal = ({ member, onClose }) => {
+                const memberEquipment = Object.values(equipment).filter(eq => eq.owner === member.id);
+                const borrowedEquipment = Object.values(equipment).filter(eq => eq.currentBorrower === member.id && eq.owner !== member.id);
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "flex items-start justify-between mb-6" },
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('div', { className: "member-avatar" }, 
+                                    member.instruments?.[0] || getInitial(member.name)
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('h2', { className: "text-2xl font-bold mb-1" }, member.name),
+                                    React.createElement('div', { className: "flex flex-wrap gap-2" },
+                                        React.createElement('span', { className: "role-badge" }, member.role),
+                                        member.joinDate && React.createElement('span', { className: "text-sm text-gray-400" }, 
+                                            `入団: ${new Date(member.joinDate).toLocaleDateString('ja-JP')}`
+                                        )
+                                    )
+                                )
+                            ),
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: "text-gray-400 hover:text-white text-2xl"
+                            }, '×')
+                        ),
+
+                        React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
+                            // 連絡先
+                            React.createElement('div', { className: "glass-card p-4" },
+                                React.createElement('h3', { className: "font-bold mb-3" }, '📞 連絡先'),
+                                React.createElement('div', { className: "space-y-2" },
+                                    member.contact?.phone && React.createElement('div', { className: "contact-badge" },
+                                        React.createElement('span', null, '📱'),
+                                        React.createElement('span', null, member.contact.phone)
+                                    ),
+                                    member.contact?.email && React.createElement('div', { className: "contact-badge" },
+                                        React.createElement('span', null, '✉️'),
+                                        React.createElement('span', null, member.contact.email)
+                                    ),
+                                    member.contact?.line && React.createElement('div', { className: "contact-badge" },
+                                        React.createElement('span', null, '💬'),
+                                        React.createElement('span', null, `LINE: ${member.contact.line}`)
+                                    )
+                                )
+                            ),
+
+                            // メモ
+                            React.createElement('div', { className: "glass-card p-4" },
+                                React.createElement('h3', { className: "font-bold mb-3" }, '📝 メモ'),
+                                React.createElement('p', { className: "text-gray-300" }, 
+                                    member.notes || '特記事項なし'
+                                )
+                            )
+                        ),
+
+                        // 所有機材
+                        React.createElement('div', { className: "mt-6" },
+                            React.createElement('h3', { className: "font-bold mb-4" }, '🎸 所有機材'),
+                            memberEquipment.length > 0 ? 
+                                React.createElement('div', { className: "grid gap-3" },
+                                    memberEquipment.map(eq => {
+                                        const type = equipmentTypes.find(t => t.id === eq.type);
+                                        return React.createElement('div', { 
+                                            key: eq.id, 
+                                            className: "equipment-card" 
+                                        },
+                                            React.createElement('div', { className: "flex items-center justify-between" },
+                                                React.createElement('div', { className: "flex items-center gap-3" },
+                                                    React.createElement('span', { className: "text-2xl" }, type?.icon),
+                                                    React.createElement('div', null,
+                                                        React.createElement('h4', { className: "font-bold" }, eq.name),
+                                                        React.createElement('p', { className: "text-sm text-gray-400" }, eq.brand || type?.label)
+                                                    )
+                                                ),
+                                                React.createElement('span', { 
+                                                    className: `px-3 py-1 rounded-full text-xs font-medium ${
+                                                        eq.status === 'available' ? 'status-available' :
+                                                        eq.status === 'lending' ? 'status-lending' :
+                                                        'status-maintenance'
+                                                    }` 
+                                                }, 
+                                                    eq.status === 'available' ? '利用可能' :
+                                                    eq.status === 'lending' ? `貸出中 → ${eq.currentBorrower}` :
+                                                    'メンテナンス中'
+                                                )
+                                            )
+                                        );
+                                    })
+                                ) :
+                                React.createElement('p', { className: "text-gray-400" }, '登録された機材はありません')
+                        ),
+
+                        // 借りている機材
+                        borrowedEquipment.length > 0 && React.createElement('div', { className: "mt-6" },
+                            React.createElement('h3', { className: "font-bold mb-4" }, '🤝 借りている機材'),
+                            React.createElement('div', { className: "grid gap-3" },
+                                borrowedEquipment.map(eq => {
+                                    const type = equipmentTypes.find(t => t.id === eq.type);
+                                    return React.createElement('div', { 
+                                        key: eq.id, 
+                                        className: "equipment-card" 
+                                    },
+                                        React.createElement('div', { className: "flex items-center justify-between" },
+                                            React.createElement('div', { className: "flex items-center gap-3" },
+                                                React.createElement('span', { className: "text-2xl" }, type?.icon),
+                                                React.createElement('div', null,
+                                                    React.createElement('h4', { className: "font-bold" }, eq.name),
+                                                    React.createElement('p', { className: "text-sm text-gray-400" }, 
+                                                        `所有者: ${eq.owner}`
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    );
+                                })
+                            )
+                        )
+                    )
+                );
+            };
+
+            // 新規機材モーダル
+            const NewEquipmentModal = ({ onClose }) => {
+                const [formData, setFormData] = useState({
+                    name: '',
+                    type: 'guitar',
+                    brand: '',
+                    model: '',
+                    owner: currentUser || Object.keys(members)[0],
+                    notes: ''
+                });
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (!formData.name || !formData.owner) {
+                        alert('機材名と所有者は必須です');
+                        return;
+                    }
+                    addEquipment(formData);
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-lg w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: "text-2xl font-bold mb-4" }, '新規機材登録'),
+                        React.createElement('form', { onSubmit: handleSubmit },
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '機材名'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.name,
+                                    onChange: (e) => setFormData({ ...formData, name: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                    placeholder: "例: Fender Stratocaster",
+                                    required: true
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'タイプ'),
+                                React.createElement('select', {
+                                    value: formData.type,
+                                    onChange: (e) => setFormData({ ...formData, type: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400"
+                                },
+                                    equipmentTypes.map(type =>
+                                        React.createElement('option', { 
+                                            key: type.id, 
+                                            value: type.id,
+                                            style: { background: '#0f172a' }
+                                        }, `${type.icon} ${type.label}`)
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4 mb-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'ブランド'),
+                                    React.createElement('input', {
+                                        type: "text",
+                                        value: formData.brand,
+                                        onChange: (e) => setFormData({ ...formData, brand: e.target.value }),
+                                        className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                        placeholder: "例: Fender"
+                                    })
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'モデル'),
+                                    React.createElement('input', {
+                                        type: "text",
+                                        value: formData.model,
+                                        onChange: (e) => setFormData({ ...formData, model: e.target.value }),
+                                        className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                        placeholder: "例: American Professional"
+                                    })
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '所有者'),
+                                React.createElement('select', {
+                                    value: formData.owner,
+                                    onChange: (e) => setFormData({ ...formData, owner: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400"
+                                },
+                                    Object.values(members).map(member =>
+                                        React.createElement('option', { 
+                                            key: member.id, 
+                                            value: member.id,
+                                            style: { background: '#0f172a' }
+                                        }, member.name)
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'メモ'),
+                                React.createElement('textarea', {
+                                    value: formData.notes,
+                                    onChange: (e) => setFormData({ ...formData, notes: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                    rows: 3,
+                                    placeholder: "シリアル番号、購入日など"
+                                })
+                            ),
+                            React.createElement('div', { className: "flex gap-3" },
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary flex-1"
+                                }, '登録'),
+                                React.createElement('button', {
+                                    type: "button",
+                                    onClick: onClose,
+                                    className: "btn-secondary flex-1"
+                                }, 'キャンセル')
+                            )
+                        )
+                    )
+                );
+            };
+
+            // 貸し借りモーダル
+            const LendingModal = ({ onClose }) => {
+                const availableEquipment = Object.values(equipment).filter(eq => eq.status === 'available');
+                const [formData, setFormData] = useState({
+                    equipmentId: '',
+                    borrower: '',
+                    purpose: '',
+                    returnDate: ''
+                });
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (!formData.equipmentId || !formData.borrower) {
+                        alert('機材と借りる人を選択してください');
+                        return;
+                    }
+                    const selectedEquipment = equipment[formData.equipmentId];
+                    recordLending({
+                        ...formData,
+                        lender: selectedEquipment.owner,
+                        equipmentName: selectedEquipment.name
+                    });
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-lg w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: "text-2xl font-bold mb-4" }, '機材の貸し借り'),
+                        React.createElement('form', { onSubmit: handleSubmit },
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '機材'),
+                                React.createElement('select', {
+                                    value: formData.equipmentId,
+                                    onChange: (e) => setFormData({ ...formData, equipmentId: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                    required: true
+                                },
+                                    React.createElement('option', { value: "", style: { background: '#0f172a' } }, '選択してください'),
+                                    availableEquipment.map(eq => {
+                                        const type = equipmentTypes.find(t => t.id === eq.type);
+                                        return React.createElement('option', { 
+                                            key: eq.id, 
+                                            value: eq.id,
+                                            style: { background: '#0f172a' }
+                                        }, `${type?.icon} ${eq.name} (${eq.owner})`)
+                                    })
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '借りる人'),
+                                React.createElement('select', {
+                                    value: formData.borrower,
+                                    onChange: (e) => setFormData({ ...formData, borrower: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                    required: true
+                                },
+                                    React.createElement('option', { value: "", style: { background: '#0f172a' } }, '選択してください'),
+                                    Object.values(members).map(member =>
+                                        React.createElement('option', { 
+                                            key: member.id, 
+                                            value: member.id,
+                                            style: { background: '#0f172a' }
+                                        }, member.name)
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '目的'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.purpose,
+                                    onChange: (e) => setFormData({ ...formData, purpose: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400",
+                                    placeholder: "練習、ライブなど"
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '返却予定日'),
+                                React.createElement('input', {
+                                    type: "date",
+                                    value: formData.returnDate,
+                                    onChange: (e) => setFormData({ ...formData, returnDate: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400"
+                                })
+                            ),
+                            React.createElement('div', { className: "flex gap-3" },
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary flex-1"
+                                }, '記録'),
+                                React.createElement('button', {
+                                    type: "button",
+                                    onClick: onClose,
+                                    className: "btn-secondary flex-1"
+                                }, 'キャンセル')
+                            )
+                        )
+                    )
+                );
+            };
+
+            return React.createElement('div', { className: "min-h-screen p-4" },
+                // ヘッダー
+                React.createElement('header', { className: "glass-card mb-6 max-w-7xl mx-auto" },
+                    React.createElement('div', { className: "p-6" },
+                        React.createElement('div', { className: "flex flex-col lg:flex-row justify-between items-center gap-4" },
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('a', {
+                                    href: "home.html",
+                                    className: "text-green-400 hover:text-green-300 transition-colors"
+                                }, '← ハブに戻る'),
+                                React.createElement('h1', { className: "text-3xl font-bold" }, '👥 メンバー・機材管理')
+                            ),
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('div', { className: "flex items-center gap-2" },
+                                    React.createElement('span', { className: "text-sm text-gray-400" }, 'ログイン:'),
+                                    React.createElement('select', {
+                                        value: currentUser,
+                                        onChange: (e) => setCurrentUser(e.target.value),
+                                        className: "p-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-green-400"
+                                    },
+                                        React.createElement('option', { value: "", style: { background: '#0f172a' } }, '選択してください'),
+                                        Object.values(members).map(member =>
+                                            React.createElement('option', { 
+                                                key: member.id, 
+                                                value: member.id,
+                                                style: { background: '#0f172a' }
+                                            }, member.name)
+                                        )
+                                    )
+                                ),
+                                React.createElement('span', {
+                                    className: `text-sm ${connectionStatus === 'オンライン' ? 'text-green-400' : 'text-gray-400'}`
+                                }, connectionStatus)
+                            )
+                        )
+                    )
+                ),
+
+                // タブ切り替え
+                React.createElement('div', { className: "max-w-7xl mx-auto mb-6" },
+                    React.createElement('div', { className: "flex gap-2 flex-wrap" },
+                        React.createElement('button', {
+                            onClick: () => setActiveTab('members'),
+                            className: `tab-button ${activeTab === 'members' ? 'active' : ''}`
+                        }, '👥 メンバー'),
+                        React.createElement('button', {
+                            onClick: () => setActiveTab('equipment'),
+                            className: `tab-button ${activeTab === 'equipment' ? 'active' : ''}`
+                        }, '🎸 機材'),
+                        React.createElement('button', {
+                            onClick: () => setActiveTab('lending'),
+                            className: `tab-button ${activeTab === 'lending' ? 'active' : ''}`
+                        }, '🤝 貸し借り')
+                    )
+                ),
+
+                // メインコンテンツ
+                React.createElement('main', { className: "max-w-7xl mx-auto" },
+                    // メンバー一覧
+                    activeTab === 'members' && React.createElement('div', { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-6" },
+                        Object.values(members).map(member =>
+                            React.createElement('div', {
+                                key: member.id,
+                                className: "member-card",
+                                onClick: () => setSelectedMember(member)
+                            },
+                                React.createElement('div', { className: "flex items-center gap-4 mb-4" },
+                                    React.createElement('div', { className: "member-avatar" }, 
+                                        member.instruments?.[0] || getInitial(member.name)
+                                    ),
+                                    React.createElement('div', null,
+                                        React.createElement('h3', { className: "text-xl font-bold" }, member.name),
+                                        React.createElement('span', { className: "role-badge" }, member.role)
+                                    )
+                                ),
+                                React.createElement('div', { className: "space-y-2" },
+                                    member.contact?.phone && React.createElement('div', { className: "text-sm text-gray-300" },
+                                        '📱 ', member.contact.phone
+                                    ),
+                                    member.contact?.line && React.createElement('div', { className: "text-sm text-gray-300" },
+                                        '💬 LINE: ', member.contact.line
+                                    )
+                                ),
+                                React.createElement('div', { className: "mt-4 pt-4 border-t border-white/10" },
+                                    React.createElement('p', { className: "text-sm text-gray-400" }, 
+                                        `機材: ${Object.values(equipment).filter(eq => eq.owner === member.id).length}点`
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    // 機材一覧
+                    activeTab === 'equipment' && React.createElement('div', null,
+                        React.createElement('div', { className: "flex justify-end mb-4" },
+                            React.createElement('button', {
+                                onClick: () => setShowNewEquipmentModal(true),
+                                className: "btn-primary"
+                            }, '+ 機材を追加')
+                        ),
+                        React.createElement('div', { className: "grid gap-4" },
+                            Object.values(equipment).length === 0 ?
+                                React.createElement('div', { className: "glass-card p-16 text-center" },
+                                    React.createElement('p', { className: "text-gray-400 text-lg" }, '機材が登録されていません')
+                                ) :
+                                Object.values(equipment).map(eq => {
+                                    const type = equipmentTypes.find(t => t.id === eq.type);
+                                    return React.createElement('div', { 
+                                        key: eq.id, 
+                                        className: "equipment-card" 
+                                    },
+                                        React.createElement('div', { className: "flex items-center justify-between" },
+                                            React.createElement('div', { className: "flex items-center gap-4" },
+                                                React.createElement('div', { className: "text-center" },
+                                                    React.createElement('div', { className: "equipment-type-icon" }, type?.icon),
+                                                    React.createElement('p', { className: "text-xs text-gray-400" }, type?.label)
+                                                ),
+                                                React.createElement('div', { className: "flex-1" },
+                                                    React.createElement('h3', { className: "font-bold text-lg" }, eq.name),
+                                                    React.createElement('p', { className: "text-sm text-gray-400" }, 
+                                                        eq.brand && eq.model ? `${eq.brand} ${eq.model}` : eq.brand || type?.label
+                                                    ),
+                                                    React.createElement('p', { className: "text-sm text-gray-500" }, 
+                                                        `所有者: ${eq.owner}`
+                                                    )
+                                                )
+                                            ),
+                                            React.createElement('div', { className: "text-right" },
+                                                React.createElement('span', { 
+                                                    className: `px-3 py-1 rounded-full text-xs font-medium ${
+                                                        eq.status === 'available' ? 'status-available' :
+                                                        eq.status === 'lending' ? 'status-lending' :
+                                                        'status-maintenance'
+                                                    }` 
+                                                }, 
+                                                    eq.status === 'available' ? '利用可能' :
+                                                    eq.status === 'lending' ? `貸出中` :
+                                                    'メンテナンス中'
+                                                ),
+                                                eq.currentBorrower && React.createElement('p', { className: "text-sm text-gray-400 mt-1" },
+                                                    `→ ${eq.currentBorrower}`
+                                                ),
+                                                eq.owner === currentUser && React.createElement('button', {
+                                                    onClick: () => deleteEquipment(eq.id),
+                                                    className: "text-red-400 hover:text-red-300 text-sm mt-2"
+                                                }, '削除')
+                                            )
+                                        )
+                                    );
+                                })
+                        )
+                    ),
+
+                    // 貸し借り履歴
+                    activeTab === 'lending' && React.createElement('div', null,
+                        React.createElement('div', { className: "flex justify-end mb-4" },
+                            React.createElement('button', {
+                                onClick: () => setShowLendingModal(true),
+                                className: "btn-primary"
+                            }, '+ 貸し借りを記録')
+                        ),
+                        React.createElement('div', { className: "glass-card p-6" },
+                            React.createElement('h3', { className: "text-xl font-bold mb-4" }, '📋 貸し借り履歴'),
+                            Object.values(lendingRecords).length === 0 ?
+                                React.createElement('p', { className: "text-gray-400 text-center py-8" }, '履歴がありません') :
+                                React.createElement('div', { className: "space-y-2" },
+                                    Object.values(lendingRecords)
+                                        .sort((a, b) => b.date - a.date)
+                                        .map(record =>
+                                            React.createElement('div', { 
+                                                key: record.id, 
+                                                className: "lending-item" 
+                                            },
+                                                React.createElement('div', { className: "flex-1" },
+                                                    React.createElement('div', { className: "font-medium" }, 
+                                                        `${record.equipmentName}`
+                                                    ),
+                                                    React.createElement('div', { className: "text-sm text-gray-400" },
+                                                        `${record.lender} → ${record.borrower}`,
+                                                        record.purpose && ` (${record.purpose})`
+                                                    ),
+                                                    React.createElement('div', { className: "text-xs text-gray-500" },
+                                                        new Date(record.date).toLocaleDateString('ja-JP')
+                                                    )
+                                                ),
+                                                React.createElement('div', null,
+                                                    record.status === 'active' ? 
+                                                        React.createElement('button', {
+                                                            onClick: () => returnEquipment(record.id, record.equipmentId),
+                                                            className: "px-3 py-1 bg-green-500/20 text-green-400 rounded-lg text-sm hover:bg-green-500/30 transition-colors"
+                                                        }, '返却') :
+                                                        React.createElement('span', { className: "text-sm text-gray-500" }, 
+                                                            `返却済 (${new Date(record.returnDate).toLocaleDateString('ja-JP')})`
+                                                        )
+                                                )
+                                            )
+                                        )
+                                )
+                        )
+                    )
+                ),
+
+                // モーダル
+                selectedMember && React.createElement(MemberDetailModal, {
+                    member: selectedMember,
+                    onClose: () => setSelectedMember(null)
+                }),
+
+                showNewEquipmentModal && React.createElement(NewEquipmentModal, {
+                    onClose: () => setShowNewEquipmentModal(false)
+                }),
+
+                showLendingModal && React.createElement(LendingModal, {
+                    onClose: () => setShowLendingModal(false)
+                })
+            );
+        };
+
+        ReactDOM.render(React.createElement(MembersApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
