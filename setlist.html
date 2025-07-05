@@ -164,10 +164,36 @@
             console.error("Firebase初期化エラー:", error);
         }
 
+        // 初期の候補曲リスト
+        const initialSongs = [
+            { id: 1, title: "輪舞-Revolution-", artist: "奥井雅美", youtubeUrl: "https://youtu.be/Y_0VKKoj-A0", anime: "少女革命ウテナ OP", duration: "4:00" },
+            { id: 2, title: "only my Railgun", artist: "fripSide", youtubeUrl: "https://youtu.be/ZhIxg6_Femo", anime: "とある科学の超電磁砲 OP", duration: "4:00" },
+            { id: 3, title: "創傷イノセンス", artist: "坂本真綾", youtubeUrl: "https://youtu.be/SFkLZ0yN3H3", anime: "亜人 OP", duration: "4:00" },
+            { id: 4, title: "怪物", artist: "YOASOBI", youtubeUrl: "https://youtu.be/dy90tA3TT1c", anime: "BEASTARS 第2期 OP", duration: "4:00" },
+            { id: 5, title: "いけないボーダーライン", artist: "ワルキューレ", youtubeUrl: "https://youtu.be/VSQMQGv8RSg", anime: "マクロスΔ", duration: "4:00" },
+            { id: 6, title: "星間飛行", artist: "中島愛", youtubeUrl: "https://youtu.be/2CnvZOs8TWM", anime: "マクロスフロンティア 挿入歌", duration: "4:00" },
+            { id: 7, title: "射手座午後9時Dont be late", artist: "中島愛", youtubeUrl: "https://youtu.be/5sKSCRuKLHo", anime: "マクロスフロンティア 挿入歌", duration: "4:00" },
+            { id: 8, title: "RESISTER", artist: "ASCA", youtubeUrl: "https://youtu.be/RPZwWt6_unE", anime: "ソードアート・オンライン アリシゼーション OP", duration: "4:00" },
+            { id: 9, title: "unlasting", artist: "LiSA", youtubeUrl: "https://youtu.be/4vvvL8y9VHM", anime: "ソードアート・オンライン アリシゼーション War of Underworld ED", duration: "4:00" },
+            { id: 10, title: "Re:I am", artist: "Aimer", youtubeUrl: "https://youtu.be/ImQSdDX_1K0", anime: "機動戦士ガンダムUC", duration: "4:00" },
+            { id: 11, title: "あの夢をなぞって", artist: "YOASOBI", youtubeUrl: "https://youtu.be/AZ8LK6n-is8", anime: "夜のクラゲは泳げない OP", duration: "4:00" },
+            { id: 12, title: "サリシノハラ", artist: "みきとP feat.初音ミク", youtubeUrl: "https://youtu.be/Ejc5SXrQvQs", anime: null, duration: "4:00" },
+            { id: 13, title: "Angel", artist: "Angel Beats!", youtubeUrl: "https://youtu.be/fxpiktN19ho", anime: "Angel Beats! 挿入歌", duration: "4:00" },
+            { id: 14, title: "ヴィラン", artist: "てにをは", youtubeUrl: "https://youtu.be/p9FJXfGHtDA", anime: null, duration: "4:00" },
+            { id: 15, title: "勇者", artist: "YOASOBI", youtubeUrl: "https://youtu.be/fMRGsM1mPP4", anime: "葬送のフリーレン OP", duration: "4:00" },
+            { id: 16, title: "リアライズ", artist: "", youtubeUrl: "https://youtu.be/uaRnwnmqrws", anime: "Re:ゼロから始める異世界生活 OP", duration: "4:00" },
+            { id: 17, title: "アイドル", artist: "YOASOBI", youtubeUrl: "https://youtu.be/9kluceRt9qg", anime: "推しの子 OP", duration: "4:00" },
+            { id: 18, title: "青春コンプレックス", artist: "結束バンド", youtubeUrl: "https://youtu.be/go_gPlSJpes", anime: "ぼっち・ざ・ろっく！", duration: "4:00" },
+            { id: 19, title: "POP TEAM EPIC", artist: "上坂すみれ", youtubeUrl: "https://youtu.be/fO9zdG6DzbY", anime: "ポプテピピック OP", duration: "4:00" },
+            { id: 20, title: "Magia", artist: "Kalafina", youtubeUrl: "https://youtu.be/ks8WPvlQpbg", anime: "魔法少女まどか☆マギカ ED", duration: "4:00" },
+            { id: 21, title: "コネクト", artist: "ClariS", youtubeUrl: "https://youtu.be/7EuTPTVpuNI", anime: "魔法少女まどか☆マギカ OP", duration: "4:00" },
+            { id: 22, title: "IGNITE", artist: "藍井エイル", youtubeUrl: "https://youtu.be/hoxUfOTE5II", anime: "ソードアート・オンライン II OP", duration: "4:00" }
+        ];
+
         const SetlistManager = () => {
             const [setlists, setSetlists] = useState([]);
             const [currentSetlist, setCurrentSetlist] = useState(null);
-            const [allSongs, setAllSongs] = useState([]);
+            const [allSongs, setAllSongs] = useState(initialSongs);
             const [setlistSongs, setSetlistSongs] = useState([]);
             const [draggedSong, setDraggedSong] = useState(null);
             const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -196,9 +222,28 @@
 
             // 全曲リストを取得
             useEffect(() => {
-                if (!database) return;
+                if (!database) {
+                    // Firebaseが使えない場合は初期曲リストを使用
+                    return;
+                }
                 
                 const songsRef = database.ref('songs');
+                
+                // 初回のみ、Firebaseに曲が無い場合は初期曲を追加
+                songsRef.once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data || Object.keys(data).length === 0) {
+                        // 初期曲をFirebaseに追加
+                        initialSongs.forEach(song => {
+                            songsRef.push({
+                                title: song.title,
+                                duration: song.duration
+                            });
+                        });
+                    }
+                });
+                
+                // リアルタイムで曲リストを監視
                 songsRef.on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     const songsArray = Object.entries(data).map(([id, song]) => ({
@@ -206,7 +251,10 @@
                         title: song.title || '無題',
                         duration: song.duration || '3:00'
                     }));
-                    setAllSongs(songsArray);
+                    
+                    if (songsArray.length > 0) {
+                        setAllSongs(songsArray);
+                    }
                 });
 
                 return () => songsRef.off();
@@ -354,9 +402,11 @@
             const filteredSongs = searchQuery.trim() === '' 
                 ? allSongs 
                 : allSongs.filter(song => {
-                    const title = (song.title || '').toLowerCase();
                     const query = searchQuery.toLowerCase();
-                    return title.includes(query);
+                    const title = (song.title || '').toLowerCase();
+                    const artist = (song.artist || '').toLowerCase();
+                    const anime = (song.anime || '').toLowerCase();
+                    return title.includes(query) || artist.includes(query) || anime.includes(query);
                 });
 
             return (
@@ -494,7 +544,7 @@
                             {/* 検索バー */}
                             <input
                                 type="text"
-                                placeholder="曲を検索..."
+                                placeholder="曲名・アーティスト・アニメで検索..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full mb-4 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
@@ -552,8 +602,30 @@
                                         onDragStart={(e) => handleDragStart(e, song, false)}
                                         onDragEnd={() => setDraggedSong(null)}
                                     >
-                                        <p className="font-medium">{song.title}</p>
-                                        <p className="text-sm text-gray-400">{song.duration}</p>
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <p className="font-medium">{song.title}</p>
+                                                <p className="text-sm text-gray-400">
+                                                    {song.artist && `${song.artist} • `}{song.duration}
+                                                </p>
+                                                {song.anime && (
+                                                    <p className="text-xs text-purple-400 mt-1">{song.anime}</p>
+                                                )}
+                                            </div>
+                                            {song.youtubeUrl && (
+                                                <a
+                                                    href={song.youtubeUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="ml-2 text-red-400 hover:text-red-500 p-1"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                                    </svg>
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
