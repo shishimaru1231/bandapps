@@ -243,23 +243,18 @@
             };
 
             // 固定メモテキストエリアコンポーネント（完全に独立）
-            const StableMemoTextArea = memo(({ songId, initialValue, onUpdate }) => {
-                const [value, setValue] = useState(initialValue || '');
+            const StableMemoTextArea = memo(({ songId, memoValue, onUpdate }) => {
+                const [localValue, setLocalValue] = useState(memoValue || '');
                 const timeoutRef = useRef(null);
-                const isFirstRender = useRef(true);
                 
-                // 初期値の同期
+                // 親コンポーネントからの値の変更を反映
                 useEffect(() => {
-                    if (isFirstRender.current) {
-                        isFirstRender.current = false;
-                        return;
-                    }
-                    setValue(initialValue || '');
-                }, [initialValue]);
+                    setLocalValue(memoValue || '');
+                }, [memoValue]);
                 
                 const handleChange = (e) => {
                     const newValue = e.target.value;
-                    setValue(newValue);
+                    setLocalValue(newValue);
                     
                     // 既存のタイマーをクリア
                     if (timeoutRef.current) {
@@ -272,24 +267,25 @@
                     }, 1000);
                 };
 
-                // コンポーネントのアンマウント時にタイマークリアと保存
+                // コンポーネントのアンマウント時に最終保存
                 useEffect(() => {
                     return () => {
                         if (timeoutRef.current) {
                             clearTimeout(timeoutRef.current);
                         }
+                        // 最新の値を即座に保存
+                        if (localValue !== memoValue) {
+                            onUpdate(songId, localValue);
+                        }
                     };
-                }, []);
+                }, [songId, localValue, memoValue, onUpdate]);
 
                 return React.createElement('textarea', {
-                    value: value,
+                    value: localValue,
                     onChange: handleChange,
                     placeholder: "この曲についてのメモをかいてね ♪",
                     className: "w-full h-20 p-3 text-sm border-2 border-pink-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 bg-pink-50 placeholder-pink-300"
                 });
-            }, (prevProps, nextProps) => {
-                // songIdが同じならば再レンダリングしない
-                return prevProps.songId === nextProps.songId && prevProps.initialValue === nextProps.initialValue;
             });
 
             // ホーム画面
@@ -416,7 +412,7 @@
                                         React.createElement(StableMemoTextArea, { 
                                             key: `memo-${song.id}`,
                                             songId: song.id, 
-                                            initialValue: memos[song.id],
+                                            memoValue: memos[song.id],
                                             onUpdate: updateMemoStable
                                         })
                                     ),
@@ -543,7 +539,7 @@
                                         React.createElement(StableMemoTextArea, { 
                                             key: `memo-${song.id}`,
                                             songId: song.id, 
-                                            initialValue: memos[song.id],
+                                            memoValue: memos[song.id],
                                             onUpdate: updateMemoStable
                                         })
                                     )
