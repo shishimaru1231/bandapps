@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>楽器パート評価アプリ ♪ - リアルタイム共同編集</title>
+    <title>がっきょくひょうかアプリ 🎪</title>
+    
+    <!-- ファビコン設定 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎪</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎪</text></svg>">
+    
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -126,14 +131,14 @@
 
         // Firebaseの設定
         const firebaseConfig = {
-            // ここにあなたのFirebase設定を入力してください
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            databaseURL: "YOUR_DATABASE_URL",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+            authDomain: "band-apps.firebaseapp.com",
+            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+            projectId: "band-apps",
+            storageBucket: "band-apps.firebasestorage.app",
+            messagingSenderId: "238355659055",
+            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+            measurementId: "G-T5ZYHTSS3L"
         };
 
         // Firebase初期化の確認
@@ -441,8 +446,8 @@
                 return React.createElement('textarea', {
                     value: localValue,
                     onChange: handleChange,
-                    placeholder: "この曲についてのメモをかいてね ♪",
-                    className: "w-full h-20 p-3 text-sm border-2 border-pink-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 bg-pink-50 placeholder-pink-300"
+                    placeholder: "このきょくについて めもをかいてね〜 (◕ᴗ◕✿)",
+                    className: "w-full h-24 p-4 text-lg border-4 border-gray-800 rounded-3xl resize-none focus:outline-none focus:ring-4 focus:ring-yellow-300 focus:border-yellow-500 bg-yellow-50 placeholder-gray-400 yuru-text"
                 });
             });
 
