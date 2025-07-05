@@ -484,8 +484,11 @@
                                     value: formData.location,
                                     onChange: (e) => setFormData({ ...formData, location: e.target.value }),
                                     className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400",
-                                    placeholder: "スタジオA、ライブハウスなど"
-                                })
+                                    placeholder: "スタジオ名、住所、駅名など（例：渋谷スタジオA、東京都渋谷区...）"
+                                }),
+                                React.createElement('p', { className: "text-xs text-gray-400 mt-1" }, 
+                                    '💡 住所や施設名を入力すると、クリックでGoogle Mapsが開きます'
+                                )
                             ),
                             React.createElement('div', { className: "mb-6" },
                                 React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'メモ'),
@@ -566,7 +569,13 @@
                             ),
                             event.location && React.createElement('div', { className: "flex items-center gap-2" },
                                 React.createElement('span', null, '📍'),
-                                React.createElement('span', null, event.location)
+                                React.createElement('a', {
+                                    href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`,
+                                    target: "_blank",
+                                    rel: "noopener noreferrer",
+                                    className: "text-cyan-400 hover:text-cyan-300 underline",
+                                    onClick: (e) => e.stopPropagation()
+                                }, event.location)
                             ),
                             event.memo && React.createElement('div', { className: "flex items-start gap-2" },
                                 React.createElement('span', null, '📝'),
