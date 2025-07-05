@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>楽器パート評価アプリ ♪</title>
+    <title>楽器パート評価アプリ ♪ - リアルタイム共同編集</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
         body { 
@@ -35,10 +40,16 @@
             50% { opacity: 1; transform: scale(1); }
         }
         
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
         .bounce-soft { animation: bounce-soft 2s ease-in-out infinite; }
         .wiggle { animation: wiggle 0.5s ease-in-out infinite; }
         .heartbeat { animation: heartbeat 1.5s ease-in-out infinite; }
         .sparkle { animation: sparkle 1.5s ease-in-out infinite; }
+        .pulse { animation: pulse 2s ease-in-out infinite; }
         
         .pastel-gradient {
             background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 25%, #ff7675 50%, #fd79a8 75%, #e17055 100%);
@@ -47,11 +58,6 @@
         .kawaii-shadow {
             box-shadow: 0 4px 15px rgba(255, 182, 193, 0.3), 
                         0 2px 4px rgba(255, 182, 193, 0.2);
-        }
-        
-        .cute-border {
-            border: 2px dashed #ffb6c1;
-            border-radius: 20px;
         }
         
         /* カスタムスクロールバー */
@@ -80,15 +86,45 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback, memo } = React;
 
+        // Firebaseの設定
+        const firebaseConfig = {
+            // ここにあなたのFirebase設定を入力してください
+  　　　　　apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+  　　　　　authDomain: "band-apps.firebaseapp.com",
+  　　　　　databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+  　　　　　projectId: "band-apps",
+  　　　　　storageBucket: "band-apps.firebasestorage.app",
+  　　　　　messagingSenderId: "238355659055",
+  　　　　　appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+  　　　　　measurementId: "G-T5ZYHTSS3L"
+        };
+
+        // Firebase初期化の確認
+        let firebaseInitialized = false;
+        let database = null;
+
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+            }
+        } catch (error) {
+            console.error("Firebase初期化エラー:", error);
+        }
+
         const MusicVotingApp = () => {
             const [currentView, setCurrentView] = useState('home');
             const [selectedSong, setSelectedSong] = useState(null);
             const [votes, setVotes] = useState({});
             const [hasVoted, setHasVoted] = useState({});
             const [memos, setMemos] = useState({});
-            const [connectionStatus, setConnectionStatus] = useState('💖 ローカル保存');
+            const [connectionStatus, setConnectionStatus] = useState('🔄 接続中...');
+            const [onlineUsers, setOnlineUsers] = useState(0);
+            const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+            const [firebaseError, setFirebaseError] = useState(!firebaseInitialized);
 
-            // プレイリストの楽曲
+            // プレイリストの楽曲（前と同じ）
             const songs = [
                 { id: 1, title: "輪舞-Revolution-", artist: "奥井雅美", youtubeUrl: "https://youtu.be/Y_0VKKoj-A0" },
                 { id: 2, title: "only my Railgun", artist: "fripSide", youtubeUrl: "https://youtu.be/ZhIxg6_Femo" },
@@ -129,70 +165,156 @@
                 { symbol: '😭', value: 1, color: 'bg-gradient-to-br from-gray-400 to-gray-600', label: 'むずかしい...' }
             ];
 
-            // データ読み込み
+            // Firebaseリアルタイムリスナーの設定
             useEffect(() => {
-                try {
-                    const savedVotes = JSON.parse(localStorage.getItem('musicVotes') || '{}');
-                    const savedHasVoted = JSON.parse(localStorage.getItem('hasVoted') || '{}');
-                    const savedMemos = JSON.parse(localStorage.getItem('musicMemos') || '{}');
-                    setVotes(savedVotes);
-                    setHasVoted(savedHasVoted);
-                    setMemos(savedMemos);
-                } catch (error) {
-                    console.log('データ読み込みエラー:', error);
+                if (!firebaseInitialized || !database) {
+                    // Firebase未設定の場合はローカルストレージを使用
+                    try {
+                        const savedVotes = JSON.parse(localStorage.getItem('musicVotes') || '{}');
+                        const savedHasVoted = JSON.parse(localStorage.getItem('hasVoted') || '{}');
+                        const savedMemos = JSON.parse(localStorage.getItem('musicMemos') || '{}');
+                        setVotes(savedVotes);
+                        setHasVoted(savedHasVoted);
+                        setMemos(savedMemos);
+                        setConnectionStatus('💾 ローカル保存');
+                    } catch (error) {
+                        console.log('データ読み込みエラー:', error);
+                    }
+                    return;
                 }
-            }, []);
+
+                // オンラインユーザー管理
+                const presenceRef = database.ref('.info/connected');
+                const userRef = database.ref(`presence/${sessionId}`);
+                
+                presenceRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        userRef.set(true);
+                        userRef.onDisconnect().remove();
+                        setConnectionStatus('🌐 オンライン');
+                    } else {
+                        setConnectionStatus('📡 再接続中...');
+                    }
+                });
+
+                // オンラインユーザー数の監視
+                const allUsersRef = database.ref('presence');
+                allUsersRef.on('value', (snapshot) => {
+                    const users = snapshot.val() || {};
+                    setOnlineUsers(Object.keys(users).length);
+                });
+
+                // 投票データの監視
+                const votesRef = database.ref('votes');
+                votesRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setVotes(data);
+                });
+
+                // 投票状態の監視
+                const hasVotedRef = database.ref('hasVoted');
+                hasVotedRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setHasVoted(data);
+                });
+
+                // メモデータの監視
+                const memosRef = database.ref('memos');
+                memosRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setMemos(data);
+                });
+
+                // クリーンアップ
+                return () => {
+                    if (database) {
+                        presenceRef.off();
+                        allUsersRef.off();
+                        votesRef.off();
+                        hasVotedRef.off();
+                        memosRef.off();
+                        userRef.remove();
+                    }
+                };
+            }, [sessionId]);
 
             // 投票処理
             const handleVote = (songId, instrument, rating) => {
                 const voteKey = `${songId}-${instrument}`;
-                const newVotes = { ...votes };
-                
-                // 既存の投票がある場合は上書き（累積しない）
-                newVotes[voteKey] = { 
+                const newVoteData = { 
                     total: rating, 
                     count: 1, 
                     ratings: { 1: 0, 2: 0, 3: 0, 4: 0 },
-                    lastRating: rating
+                    lastRating: rating,
+                    lastUpdated: Date.now(),
+                    updatedBy: sessionId
                 };
-                newVotes[voteKey].ratings[rating] = 1;
+                newVoteData.ratings[rating] = 1;
                 
-                setVotes(newVotes);
-                localStorage.setItem('musicVotes', JSON.stringify(newVotes));
-                
-                const newHasVoted = { ...hasVoted };
-                newHasVoted[voteKey] = true;
-                setHasVoted(newHasVoted);
-                localStorage.setItem('hasVoted', JSON.stringify(newHasVoted));
+                if (firebaseInitialized && database) {
+                    // Firebaseに保存
+                    database.ref(`votes/${voteKey}`).set(newVoteData);
+                    database.ref(`hasVoted/${voteKey}`).set(true);
+                } else {
+                    // ローカルストレージに保存
+                    const newVotes = { ...votes, [voteKey]: newVoteData };
+                    const newHasVoted = { ...hasVoted, [voteKey]: true };
+                    
+                    setVotes(newVotes);
+                    setHasVoted(newHasVoted);
+                    
+                    localStorage.setItem('musicVotes', JSON.stringify(newVotes));
+                    localStorage.setItem('hasVoted', JSON.stringify(newHasVoted));
+                }
             };
 
-            // メモ更新（完全に独立した処理）
+            // メモ更新
             const updateMemoStable = useCallback((songId, newValue) => {
-                setMemos(prevMemos => {
-                    const updatedMemos = { ...prevMemos };
+                if (firebaseInitialized && database) {
+                    // Firebaseに保存
                     if (newValue === '') {
-                        delete updatedMemos[songId];
+                        database.ref(`memos/${songId}`).remove();
                     } else {
-                        updatedMemos[songId] = newValue;
+                        database.ref(`memos/${songId}`).set({
+                            text: newValue,
+                            lastUpdated: Date.now(),
+                            updatedBy: sessionId
+                        });
                     }
-                    
-                    localStorage.setItem('musicMemos', JSON.stringify(updatedMemos));
-                    return updatedMemos;
-                });
-            }, []);
+                } else {
+                    // ローカルストレージに保存
+                    setMemos(prevMemos => {
+                        const updatedMemos = { ...prevMemos };
+                        if (newValue === '') {
+                            delete updatedMemos[songId];
+                        } else {
+                            updatedMemos[songId] = newValue;
+                        }
+                        
+                        localStorage.setItem('musicMemos', JSON.stringify(updatedMemos));
+                        return updatedMemos;
+                    });
+                }
+            }, [sessionId]);
 
             // 投票リセット
             const removeVote = (songId, instrument) => {
                 const voteKey = `${songId}-${instrument}`;
-                const newVotes = { ...votes };
-                delete newVotes[voteKey];
-                setVotes(newVotes);
-                localStorage.setItem('musicVotes', JSON.stringify(newVotes));
                 
-                const newHasVoted = { ...hasVoted };
-                delete newHasVoted[voteKey];
-                setHasVoted(newHasVoted);
-                localStorage.setItem('hasVoted', JSON.stringify(newHasVoted));
+                if (firebaseInitialized && database) {
+                    database.ref(`votes/${voteKey}`).remove();
+                    database.ref(`hasVoted/${voteKey}`).remove();
+                } else {
+                    const newVotes = { ...votes };
+                    delete newVotes[voteKey];
+                    setVotes(newVotes);
+                    localStorage.setItem('musicVotes', JSON.stringify(newVotes));
+                    
+                    const newHasVoted = { ...hasVoted };
+                    delete newHasVoted[voteKey];
+                    setHasVoted(newHasVoted);
+                    localStorage.setItem('hasVoted', JSON.stringify(newHasVoted));
+                }
             };
 
             // スコア計算関数
@@ -242,43 +364,42 @@
                 return voteData ? voteData.ratings : { 1: 0, 2: 0, 3: 0, 4: 0 };
             };
 
-            // 固定メモテキストエリアコンポーネント（完全に独立）
+            // メモテキストエリアコンポーネント
             const StableMemoTextArea = memo(({ songId, memoValue, onUpdate }) => {
-                const [localValue, setLocalValue] = useState(memoValue || '');
+                const [localValue, setLocalValue] = useState('');
                 const timeoutRef = useRef(null);
                 
-                // 親コンポーネントからの値の変更を反映
+                // Firebaseのメモ構造に対応
                 useEffect(() => {
-                    setLocalValue(memoValue || '');
+                    if (typeof memoValue === 'object' && memoValue?.text) {
+                        setLocalValue(memoValue.text);
+                    } else if (typeof memoValue === 'string') {
+                        setLocalValue(memoValue);
+                    } else {
+                        setLocalValue('');
+                    }
                 }, [memoValue]);
                 
                 const handleChange = (e) => {
                     const newValue = e.target.value;
                     setLocalValue(newValue);
                     
-                    // 既存のタイマーをクリア
                     if (timeoutRef.current) {
                         clearTimeout(timeoutRef.current);
                     }
                     
-                    // 1秒後に保存
                     timeoutRef.current = setTimeout(() => {
                         onUpdate(songId, newValue);
                     }, 1000);
                 };
 
-                // コンポーネントのアンマウント時に最終保存
                 useEffect(() => {
                     return () => {
                         if (timeoutRef.current) {
                             clearTimeout(timeoutRef.current);
                         }
-                        // 最新の値を即座に保存
-                        if (localValue !== memoValue) {
-                            onUpdate(songId, localValue);
-                        }
                     };
-                }, [songId, localValue, memoValue, onUpdate]);
+                }, []);
 
                 return React.createElement('textarea', {
                     value: localValue,
@@ -287,6 +408,46 @@
                     className: "w-full h-20 p-3 text-sm border-2 border-pink-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 bg-pink-50 placeholder-pink-300"
                 });
             });
+
+            // Firebase設定画面
+            if (firebaseError) {
+                return React.createElement('div', { className: "min-h-screen pastel-gradient flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "bg-white rounded-3xl p-8 max-w-2xl w-full kawaii-shadow" },
+                        React.createElement('div', { className: "text-center mb-6" },
+                            React.createElement('div', { className: "text-6xl mb-4" }, '🔥'),
+                            React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-4" }, 'Firebase設定が必要です'),
+                            React.createElement('p', { className: "text-gray-600 mb-6" }, 
+                                'リアルタイム共同編集を使用するには、Firebaseの設定が必要です。'
+                            )
+                        ),
+                        React.createElement('div', { className: "bg-pink-50 rounded-2xl p-6 mb-6" },
+                            React.createElement('h2', { className: "text-xl font-bold text-pink-600 mb-3" }, '設定手順：'),
+                            React.createElement('ol', { className: "text-left space-y-2 text-gray-700" },
+                                React.createElement('li', null, '1. Firebase Console (https://console.firebase.google.com) にアクセス'),
+                                React.createElement('li', null, '2. 新しいプロジェクトを作成'),
+                                React.createElement('li', null, '3. Realtime Databaseを有効化'),
+                                React.createElement('li', null, '4. プロジェクト設定から設定情報をコピー'),
+                                React.createElement('li', null, '5. このHTMLファイルの firebaseConfig 部分に貼り付け')
+                            )
+                        ),
+                        React.createElement('div', { className: "bg-blue-50 rounded-2xl p-6 mb-6" },
+                            React.createElement('h3', { className: "text-lg font-bold text-blue-600 mb-2" }, 'Realtime Databaseルール：'),
+                            React.createElement('pre', { className: "bg-white rounded-lg p-3 text-sm overflow-x-auto" },
+                                `{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}`
+                            )
+                        ),
+                        React.createElement('button', {
+                            onClick: () => setFirebaseError(false),
+                            className: "bg-gradient-to-r from-pink-500 to-purple-500 text-white px-8 py-3 rounded-full font-bold hover:scale-105 transition-all duration-300"
+                        }, 'ローカルモードで続ける')
+                    )
+                );
+            }
 
             // ホーム画面
             if (currentView === 'home') {
@@ -307,10 +468,24 @@
                             ),
                             
                             React.createElement('div', { className: "mt-8 p-6 bg-white bg-opacity-90 rounded-3xl max-w-md mx-auto kawaii-shadow" },
-                                React.createElement('p', { className: "text-lg mb-3 text-pink-600 font-bold" }, connectionStatus),
+                                React.createElement('div', { className: "flex items-center justify-center gap-3 mb-3" },
+                                    React.createElement('span', { 
+                                        className: `text-lg font-bold ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-pink-600'}` 
+                                    }, connectionStatus),
+                                    onlineUsers > 0 && React.createElement('span', { 
+                                        className: "bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold" 
+                                    }, `${onlineUsers}人が接続中`)
+                                ),
                                 React.createElement('p', { className: "text-sm text-gray-600" },
-                                    'データはブラウザに保存されます ♪', React.createElement('br'),
-                                    React.createElement('span', { className: "text-pink-500" }, '安心してつかってね！')
+                                    firebaseInitialized ? 
+                                        React.createElement('span', null,
+                                            'リアルタイムで共同編集できます！', React.createElement('br'),
+                                            React.createElement('span', { className: "text-green-500 font-bold" }, '✨ みんなの変更が即座に反映されます ✨')
+                                        ) :
+                                        React.createElement('span', null,
+                                            'データはブラウザに保存されます ♪', React.createElement('br'),
+                                            React.createElement('span', { className: "text-pink-500" }, '安心してつかってね！')
+                                        )
                                 )
                             )
                         ),
@@ -340,7 +515,7 @@
                 );
             }
 
-            // 投票画面
+            // 投票画面（前と同じコンポーネント構造だが、リアルタイム更新対応）
             if (currentView === 'vote') {
                 return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-pink-50 to-purple-50" },
                     React.createElement('div', { className: "bg-white shadow-lg sticky top-0 z-10" },
@@ -353,7 +528,14 @@
                                 React.createElement('h1', { className: "text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent" }, 
                                     '🎵 投票タイム 🎵'
                                 ),
-                                React.createElement('div', { className: "text-sm text-pink-600 font-medium" }, connectionStatus)
+                                React.createElement('div', { className: "flex items-center gap-2" },
+                                    React.createElement('span', { 
+                                        className: `text-sm font-medium ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-pink-600'}` 
+                                    }, connectionStatus),
+                                    onlineUsers > 0 && React.createElement('span', { 
+                                        className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full" 
+                                    }, `${onlineUsers}人`)
+                                )
                             )
                         )
                     ),
@@ -462,7 +644,7 @@
                 );
             }
 
-            // 結果画面
+            // 結果画面（前と同じ）
             return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-blue-50 to-green-50" },
                 React.createElement('div', { className: "bg-white shadow-lg" },
                     React.createElement('div', { className: "container mx-auto px-4 py-5" },
@@ -474,7 +656,14 @@
                             React.createElement('h1', { className: "text-2xl font-bold bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent" }, 
                                 '📊 結果発表 📊'
                             ),
-                            React.createElement('div', { className: "text-sm text-blue-600 font-medium" }, connectionStatus)
+                            React.createElement('div', { className: "flex items-center gap-2" },
+                                React.createElement('span', { 
+                                    className: `text-sm font-medium ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-blue-600'}` 
+                                }, connectionStatus),
+                                onlineUsers > 0 && React.createElement('span', { 
+                                    className: "text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full" 
+                                }, `${onlineUsers}人`)
+                            )
                         )
                     )
                 ),
