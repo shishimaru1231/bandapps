@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バンド活動ハブ 🎸</title>
+    
+    <!-- ファビコン設定 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎸</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎸</text></svg>">
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        body { 
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: #1a1a2e;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 119, 232, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 232, 119, 0.2) 0%, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-10px) rotate(-3deg); }
+            66% { transform: translateY(-10px) rotate(3deg); }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(120, 119, 198, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(120, 119, 198, 0.8); }
+        }
+        
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+        .slide-up { animation: slide-up 0.6s ease-out; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .status-online {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #4ade80;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .quick-info-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        
+        /* カスタムスクロールバー */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #667eea, #f093fb);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #5a67d8, #e878e3);
+        }
+    </style>
+</head>
+<body>
+    <div id="root">読み込み中...</div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Firebaseの設定（index.htmlと同じ設定を使用）
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+            authDomain: "band-apps.firebaseapp.com",
+            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+            projectId: "band-apps",
+            storageBucket: "band-apps.firebasestorage.app",
+            messagingSenderId: "238355659055",
+            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+            measurementId: "G-T5ZYHTSS3L"
+        };
+
+        // Firebase初期化
+        let firebaseInitialized = false;
+        let database = null;
+
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+            }
+        } catch (error) {
+            console.error("Firebase初期化エラー:", error);
+        }
+
+        const BandHub = () => {
+            const [currentTime, setCurrentTime] = useState(new Date());
+            const [connectionStatus, setConnectionStatus] = useState('確認中...');
+            const [onlineUsers, setOnlineUsers] = useState(0);
+            const [nextSchedule, setNextSchedule] = useState(null);
+            const [recentUpdate, setRecentUpdate] = useState(null);
+            const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+
+            // 機能カード一覧
+            const features = [
+                {
+                    id: 'songs',
+                    title: '楽曲評価',
+                    description: 'みんなで曲を評価',
+                    icon: '🎵',
+                    url: 'index.html',
+                    color: 'from-pink-500 to-purple-500',
+                    bgColor: 'rgba(236, 72, 153, 0.2)'
+                },
+                {
+                    id: 'schedule',
+                    title: 'スケジュール',
+                    description: '練習・ライブ日程',
+                    icon: '📅',
+                    url: 'schedule.html',
+                    color: 'from-blue-500 to-cyan-500',
+                    bgColor: 'rgba(59, 130, 246, 0.2)',
+                    comingSoon: true
+                },
+                {
+                    id: 'setlist',
+                    title: 'セットリスト',
+                    description: 'ライブの曲順管理',
+                    icon: '🎸',
+                    url: 'setlist.html',
+                    color: 'from-purple-500 to-indigo-500',
+                    bgColor: 'rgba(139, 92, 246, 0.2)',
+                    comingSoon: true
+                },
+                {
+                    id: 'members',
+                    title: 'メンバー・機材',
+                    description: 'メンバー情報と機材',
+                    icon: '👥',
+                    url: 'members.html',
+                    color: 'from-green-500 to-teal-500',
+                    bgColor: 'rgba(34, 197, 94, 0.2)',
+                    comingSoon: true
+                },
+                {
+                    id: 'finance',
+                    title: '収支管理',
+                    description: 'お金の管理',
+                    icon: '💰',
+                    url: 'finance.html',
+                    color: 'from-yellow-500 to-orange-500',
+                    bgColor: 'rgba(250, 204, 21, 0.2)',
+                    comingSoon: true
+                },
+                {
+                    id: 'board',
+                    title: '掲示板',
+                    description: '連絡事項・ファイル共有',
+                    icon: '📝',
+                    url: 'board.html',
+                    color: 'from-red-500 to-pink-500',
+                    bgColor: 'rgba(239, 68, 68, 0.2)',
+                    comingSoon: true
+                }
+            ];
+
+            // 時計の更新
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    setCurrentTime(new Date());
+                }, 1000);
+                return () => clearInterval(timer);
+            }, []);
+
+            // Firebase接続状態の監視
+            useEffect(() => {
+                if (!firebaseInitialized || !database) {
+                    setConnectionStatus('ローカルモード');
+                    return;
+                }
+
+                const presenceRef = database.ref('.info/connected');
+                const userRef = database.ref(`presence/${sessionId}`);
+                
+                presenceRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        userRef.set(true);
+                        userRef.onDisconnect().remove();
+                        setConnectionStatus('オンライン');
+                    } else {
+                        setConnectionStatus('オフライン');
+                    }
+                });
+
+                // オンラインユーザー数の監視
+                const allUsersRef = database.ref('presence');
+                allUsersRef.on('value', (snapshot) => {
+                    const users = snapshot.val() || {};
+                    setOnlineUsers(Object.keys(users).length);
+                });
+
+                return () => {
+                    if (database) {
+                        presenceRef.off();
+                        allUsersRef.off();
+                        userRef.remove();
+                    }
+                };
+            }, [sessionId]);
+
+            // 今後の実装で使用する予定のデータ取得
+            useEffect(() => {
+                // 次の予定を取得（仮のデータ）
+                setNextSchedule({
+                    title: '練習',
+                    date: '12/25 19:00',
+                    location: 'スタジオA'
+                });
+
+                // 最新の更新を取得（仮のデータ）
+                setRecentUpdate({
+                    type: '楽曲評価',
+                    content: '「アイドル」の評価が更新されました',
+                    time: '30分前'
+                });
+            }, []);
+
+            const formatTime = (date) => {
+                return date.toLocaleTimeString('ja-JP', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            };
+
+            const formatDate = (date) => {
+                return date.toLocaleDateString('ja-JP', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                });
+            };
+
+            return React.createElement('div', { className: "min-h-screen" },
+                // ヘッダー
+                React.createElement('header', { className: "glass-card mx-4 mt-4 lg:mx-auto lg:max-w-7xl" },
+                    React.createElement('div', { className: "p-6" },
+                        React.createElement('div', { className: "flex flex-col lg:flex-row justify-between items-center gap-4" },
+                            React.createElement('div', { className: "text-center lg:text-left" },
+                                React.createElement('h1', { className: "text-4xl font-bold gradient-text mb-2" }, 
+                                    '🎸 バンド活動ハブ'
+                                ),
+                                React.createElement('p', { className: "text-gray-300" }, 
+                                    'すべての活動をここから'
+                                )
+                            ),
+                            React.createElement('div', { className: "text-center lg:text-right" },
+                                React.createElement('div', { className: "text-3xl font-bold text-white mb-1" }, 
+                                    formatTime(currentTime)
+                                ),
+                                React.createElement('div', { className: "text-sm text-gray-400" }, 
+                                    formatDate(currentTime)
+                                ),
+                                React.createElement('div', { className: "flex items-center justify-center lg:justify-end gap-2 mt-2" },
+                                    React.createElement('span', { className: "status-online" }),
+                                    React.createElement('span', { className: "text-sm text-gray-300" }, 
+                                        connectionStatus
+                                    ),
+                                    onlineUsers > 0 && React.createElement('span', { 
+                                        className: "text-sm text-gray-400" 
+                                    }, `(${onlineUsers}人)`)
+                                )
+                            )
+                        )
+                    )
+                ),
+
+                // メインコンテンツ
+                React.createElement('main', { className: "container mx-auto px-4 py-8 max-w-7xl" },
+                    // クイック情報セクション
+                    React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" },
+                        // 次の予定
+                        React.createElement('div', { className: "quick-info-card slide-up" },
+                            React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
+                                React.createElement('span', null, '📍'),
+                                '次の予定'
+                            ),
+                            nextSchedule ? React.createElement('div', null,
+                                React.createElement('p', { className: "text-xl font-bold text-cyan-400" }, 
+                                    nextSchedule.title
+                                ),
+                                React.createElement('p', { className: "text-gray-300" }, 
+                                    nextSchedule.date
+                                ),
+                                React.createElement('p', { className: "text-sm text-gray-400" }, 
+                                    nextSchedule.location
+                                )
+                            ) : React.createElement('p', { className: "text-gray-400" }, 
+                                '予定はありません'
+                            )
+                        ),
+
+                        // 最新の更新
+                        React.createElement('div', { className: "quick-info-card slide-up", style: { animationDelay: '0.1s' } },
+                            React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
+                                React.createElement('span', null, '🔔'),
+                                '最新の更新'
+                            ),
+                            recentUpdate ? React.createElement('div', null,
+                                React.createElement('p', { className: "text-sm text-pink-400 font-medium" }, 
+                                    recentUpdate.type
+                                ),
+                                React.createElement('p', { className: "text-gray-300" }, 
+                                    recentUpdate.content
+                                ),
+                                React.createElement('p', { className: "text-sm text-gray-500" }, 
+                                    recentUpdate.time
+                                )
+                            ) : React.createElement('p', { className: "text-gray-400" }, 
+                                '更新はありません'
+                            )
+                        )
+                    ),
+
+                    // 機能グリッド
+                    React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" },
+                        features.map((feature, index) => 
+                            React.createElement('div', {
+                                key: feature.id,
+                                className: `feature-card p-6 slide-up ${feature.comingSoon ? 'opacity-70' : ''}`,
+                                style: { 
+                                    animationDelay: `${0.2 + index * 0.1}s`,
+                                    background: feature.bgColor
+                                },
+                                onClick: () => {
+                                    if (!feature.comingSoon) {
+                                        window.location.href = feature.url;
+                                    }
+                                }
+                            },
+                                React.createElement('div', { className: "text-5xl mb-4 float-animation" }, 
+                                    feature.icon
+                                ),
+                                React.createElement('h3', { 
+                                    className: `text-xl font-bold mb-2 bg-gradient-to-r ${feature.color} bg-clip-text text-transparent` 
+                                }, feature.title),
+                                React.createElement('p', { className: "text-gray-300 text-sm mb-4" }, 
+                                    feature.description
+                                ),
+                                feature.comingSoon ? 
+                                    React.createElement('span', { 
+                                        className: "inline-block px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-full" 
+                                    }, '準備中') :
+                                    React.createElement('span', { 
+                                        className: `inline-block px-3 py-1 bg-gradient-to-r ${feature.color} text-white text-xs rounded-full` 
+                                    }, '利用可能')
+                            )
+                        )
+                    )
+                ),
+
+                // フッター
+                React.createElement('footer', { className: "mt-12 pb-8 text-center text-gray-400 text-sm" },
+                    React.createElement('p', null, 
+                        '🎸 Band Apps © 2024 | ',
+                        React.createElement('span', { className: "text-gray-500" }, 
+                            'Made with ❤️ for Musicians'
+                        )
+                    )
+                )
+            );
+        };
+
+        ReactDOM.render(React.createElement(BandHub), document.getElementById('root'));
+    </script>
+</body>
+</html>
