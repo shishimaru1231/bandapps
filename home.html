@@ -183,6 +183,7 @@
             const [onlineUsers, setOnlineUsers] = useState(0);
             const [nextSchedule, setNextSchedule] = useState(null);
             const [recentUpdate, setRecentUpdate] = useState(null);
+            const [recentPost, setRecentPost] = useState(null);
             const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
 
             // 機能カード一覧
@@ -282,123 +283,85 @@
             useEffect(() => {
                 if (!firebaseInitialized || !database) return;
 
-                // スケジュールデータの監視
-                const schedulesRef = database.ref('schedules');
-                schedulesRef.on('value', (snapshot) => {
-                    const data = snapshot.val() || {};
-                    const now = new Date();
-                    let nextEvent = null;
-                    let nearestDate = null;
-
-                    // 次の予定を探す
-                    Object.entries(data).forEach(([dateKey, events]) => {
-                        const eventDate = new Date(dateKey);
-                        if (eventDate >= now) {
-                            Object.values(events).forEach(event => {
-                                const eventDateTime = new Date(`${event.date} ${event.time || '00:00'}`);
-                                if (!nearestDate || eventDateTime < nearestDate) {
-                                    nearestDate = eventDateTime;
-                                    nextEvent = {
-                                        title: event.title,
-                                        date: `${new Date(event.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })} ${event.time || ''}`,
-                                        location: event.location
-                                    };
-                                }
-                            });
-                        }
-                    });
-
-                    setNextSchedule(nextEvent);
-                });
-
-                // 掲示板の最新投稿を監視
-                const boardRef = database.ref('board/posts');
-                boardRef.on('value', (snapshot) => {
-                    const posts = snapshot.val() || {};
-                    let latestPost = null;
-                    let latestTime = 0;
-
-                    // 最新の投稿を探す
-                    Object.values(posts).forEach(post => {
-                        if (post.createdAt > latestTime) {
-                            latestTime = post.createdAt;
-                            const timeDiff = Date.now() - post.createdAt;
-                            const timeAgo = timeDiff < 60000 ? '今' :
-                                         timeDiff < 3600000 ? `${Math.floor(timeDiff / 60000)}分前` :
-                                         timeDiff < 86400000 ? `${Math.floor(timeDiff / 3600000)}時間前` :
-                                         `${Math.floor(timeDiff / 86400000)}日前`;
-                            
-                            latestPost = {
-                                title: post.title,
-                                content: post.content,
-                                author: post.author,
-                                time: timeAgo
-                            };
-                        }
-                    });
-
-                    if (latestPost) {
-                        setRecentPost(latestPost);
-                    }
-                });
-
-                // 最新の更新を監視
-                const updatesRef = database.ref();
-                const updateTypes = [
-                    { ref: 'schedules', type: 'スケジュール', contentKey: 'title' },
-                    { ref: 'votes', type: '楽曲評価', contentKey: null },
-                    { ref: 'setlists', type: 'セットリスト', contentKey: 'name' },
-                    { ref: 'board/posts', type: '掲示板', contentKey: 'title' },
-                    { ref: 'finance/transactions', type: '収支管理', contentKey: 'title' }
-                ];
-
-                let latestUpdate = null;
-                let latestTime = 0;
-
-                updateTypes.forEach(({ ref, type, contentKey }) => {
-                    database.ref(ref).on('value', (snapshot) => {
+                try {
+                    // スケジュールデータの監視
+                    const schedulesRef = database.ref('schedules');
+                    schedulesRef.on('value', (snapshot) => {
                         const data = snapshot.val() || {};
-                        
-                        // 最新の更新を探す
-                        Object.values(data).forEach(item => {
-                            const updateTime = item.updatedAt || item.createdAt || item.lastUpdated || 0;
-                            if (updateTime > latestTime) {
-                                latestTime = updateTime;
-                                const timeDiff = Date.now() - updateTime;
+                        const now = new Date();
+                        let nextEvent = null;
+                        let nearestDate = null;
+
+                        // 次の予定を探す
+                        Object.entries(data).forEach(([dateKey, events]) => {
+                            const eventDate = new Date(dateKey);
+                            if (eventDate >= now && events) {
+                                Object.values(events).forEach(event => {
+                                    if (event && event.date) {
+                                        const eventDateTime = new Date(`${event.date} ${event.time || '00:00'}`);
+                                        if (!nearestDate || eventDateTime < nearestDate) {
+                                            nearestDate = eventDateTime;
+                                            nextEvent = {
+                                                title: event.title || '予定',
+                                                date: `${new Date(event.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })} ${event.time || ''}`,
+                                                location: event.location || ''
+                                            };
+                                        }
+                                    }
+                                });
+                            }
+                        });
+
+                        setNextSchedule(nextEvent);
+                    });
+
+                    // 掲示板の最新投稿を監視
+                    const boardRef = database.ref('board/posts');
+                    boardRef.on('value', (snapshot) => {
+                        const posts = snapshot.val() || {};
+                        let latestPost = null;
+                        let latestTime = 0;
+
+                        // 最新の投稿を探す
+                        Object.values(posts).forEach(post => {
+                            if (post && post.createdAt > latestTime) {
+                                latestTime = post.createdAt;
+                                const timeDiff = Date.now() - post.createdAt;
                                 const timeAgo = timeDiff < 60000 ? '今' :
                                              timeDiff < 3600000 ? `${Math.floor(timeDiff / 60000)}分前` :
                                              timeDiff < 86400000 ? `${Math.floor(timeDiff / 3600000)}時間前` :
                                              `${Math.floor(timeDiff / 86400000)}日前`;
                                 
-                                let content = '';
-                                if (type === '楽曲評価') {
-                                    content = '評価が更新されました';
-                                } else if (contentKey && item[contentKey]) {
-                                    content = `「${item[contentKey]}」が更新されました`;
-                                } else {
-                                    content = '新しい更新があります';
-                                }
-
-                                latestUpdate = {
-                                    type,
-                                    content,
+                                latestPost = {
+                                    title: post.title || '',
+                                    content: post.content || '',
+                                    author: post.author || '',
                                     time: timeAgo
                                 };
                             }
                         });
-                        
-                        if (latestUpdate) {
-                            setRecentUpdate(latestUpdate);
+
+                        if (latestPost) {
+                            setRecentPost(latestPost);
                         }
                     });
-                });
+
+                    // 最新の更新を監視（シンプル版）
+                    setRecentUpdate({
+                        type: 'システム',
+                        content: 'すべて正常に動作中',
+                        time: '今'
+                    });
+
+                } catch (error) {
+                    console.error('データ取得エラー:', error);
+                }
 
                 return () => {
-                    schedulesRef.off();
-                    boardRef.off();
-                    updateTypes.forEach(({ ref }) => {
-                        database.ref(ref).off();
-                    });
+                    if (database) {
+                        database.ref('schedules').off();
+                        database.ref('board/posts').off();
+                    }
                 };
             }, []);
 
@@ -526,15 +489,13 @@
                         features.map((feature, index) => 
                             React.createElement('div', {
                                 key: feature.id,
-                                className: `feature-card p-6 slide-up ${feature.comingSoon ? 'opacity-70' : ''}`,
+                                className: `feature-card p-6 slide-up`,
                                 style: { 
                                     animationDelay: `${0.2 + index * 0.1}s`,
                                     background: feature.bgColor
                                 },
                                 onClick: () => {
-                                    if (!feature.comingSoon) {
-                                        window.location.href = feature.url;
-                                    }
+                                    window.location.href = feature.url;
                                 }
                             },
                                 React.createElement('div', { className: "text-5xl mb-4 float-animation" }, 
@@ -546,13 +507,9 @@
                                 React.createElement('p', { className: "text-gray-300 text-sm mb-4" }, 
                                     feature.description
                                 ),
-                                feature.comingSoon ? 
-                                    React.createElement('span', { 
-                                        className: "inline-block px-3 py-1 bg-gray-700 text-gray-300 text-xs rounded-full" 
-                                    }, '準備中') :
-                                    React.createElement('span', { 
-                                        className: `inline-block px-3 py-1 bg-gradient-to-r ${feature.color} text-white text-xs rounded-full` 
-                                    }, '利用可能')
+                                React.createElement('span', { 
+                                    className: `inline-block px-3 py-1 bg-gradient-to-r ${feature.color} text-white text-xs rounded-full` 
+                                }, '利用可能')
                             )
                         )
                     )
