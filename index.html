@@ -13,7 +13,7 @@
     <div id="root">読み込み中...</div>
     
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+        const { useState, useEffect, useRef, useCallback, memo } = React;
 
         const MusicVotingApp = () => {
             const [currentView, setCurrentView] = useState('home');
@@ -27,7 +27,7 @@
             const songs = [
                 { id: 1, title: "輪舞-Revolution-", artist: "奥井雅美", youtubeUrl: "https://youtu.be/Y_0VKKoj-A0" },
                 { id: 2, title: "only my Railgun", artist: "fripSide", youtubeUrl: "https://youtu.be/ZhIxg6_Femo" },
-                { id: 3, title: "創傷イノセンス", artist: "坂本真綾", youtubeUrl: "https://youtu.be/SFkLZ0yN3H8" },
+                { id: 3, title: "創傷イノセンス", artist: "坂本真綾", youtubeUrl: "https://youtu.be/SFkLZ0yN3H3" },
                 { id: 4, title: "怪物", artist: "YOASOBI", youtubeUrl: "https://youtu.be/dy90tA3TT1c" },
                 { id: 5, title: "いけないボーダーライン", artist: "ワルキューレ", youtubeUrl: "https://youtu.be/VSQMQGv8RSg" },
                 { id: 6, title: "星間飛行", artist: "中島愛", youtubeUrl: "https://youtu.be/2CnvZOs8TWM" },
@@ -83,13 +83,14 @@
                 const voteKey = `${songId}-${instrument}`;
                 const newVotes = { ...votes };
                 
-                if (!newVotes[voteKey]) {
-                    newVotes[voteKey] = { total: 0, count: 0, ratings: { 1: 0, 2: 0, 3: 0, 4: 0 } };
-                }
-                
-                newVotes[voteKey].total += rating;
-                newVotes[voteKey].count += 1;
-                newVotes[voteKey].ratings[rating] += 1;
+                // 既存の投票がある場合は上書き（累積しない）
+                newVotes[voteKey] = { 
+                    total: rating, 
+                    count: 1, 
+                    ratings: { 1: 0, 2: 0, 3: 0, 4: 0 },
+                    lastRating: rating
+                };
+                newVotes[voteKey].ratings[rating] = 1;
                 
                 setVotes(newVotes);
                 localStorage.setItem('musicVotes', JSON.stringify(newVotes));
@@ -102,22 +103,16 @@
 
             // メモ更新（完全に独立した処理）
             const updateMemoStable = useCallback((songId, newValue) => {
-                setMemos(prevMemos => {
-                    const updatedMemos = { ...prevMemos };
-                    if (newValue === '') {
-                        delete updatedMemos[songId];
-                    } else {
-                        updatedMemos[songId] = newValue;
-                    }
-                    
-                    // ローカルストレージに保存
-                    setTimeout(() => {
-                        localStorage.setItem('musicMemos', JSON.stringify(updatedMemos));
-                    }, 0);
-                    
-                    return updatedMemos;
-                });
-            }, []);
+                const updatedMemos = { ...memos };
+                if (newValue === '') {
+                    delete updatedMemos[songId];
+                } else {
+                    updatedMemos[songId] = newValue;
+                }
+                
+                setMemos(updatedMemos);
+                localStorage.setItem('musicMemos', JSON.stringify(updatedMemos));
+            }, [memos]);
 
             // 投票リセット
             const removeVote = (songId, instrument) => {
@@ -142,8 +137,8 @@
                     const voteKey = `${songId}-${instrument.id}`;
                     const voteData = votes[voteKey];
                     if (voteData && voteData.count > 0) {
-                        totalScore += voteData.total;
-                        totalCount += voteData.count;
+                        totalScore += voteData.lastRating || voteData.total;
+                        totalCount += 1;
                     }
                 });
                 
@@ -165,7 +160,7 @@
                 const voteKey = `${songId}-${instrument}`;
                 const voteData = votes[voteKey];
                 if (!voteData || voteData.count === 0) return 0;
-                return (voteData.total / voteData.count).toFixed(1);
+                return voteData.lastRating || voteData.total;
             };
 
             const getVoteCount = (songId, instrument) => {
@@ -180,18 +175,11 @@
                 return voteData ? voteData.ratings : { 1: 0, 2: 0, 3: 0, 4: 0 };
             };
 
-            // 固定メモテキストエリアコンポーネント
-            const StableMemoTextArea = React.memo(({ songId, currentValue }) => {
-                const [value, setValue] = useState(currentValue || '');
+            // 固定メモテキストエリアコンポーネント（完全に独立）
+            const StableMemoTextArea = memo(({ songId, initialValue, onUpdate }) => {
+                const [value, setValue] = useState(initialValue || '');
                 const timeoutRef = useRef(null);
                 
-                // 外部からの値変更を反映（初期読み込み時のみ）
-                useEffect(() => {
-                    if (currentValue !== undefined && value === '' && currentValue !== '') {
-                        setValue(currentValue);
-                    }
-                }, [currentValue]);
-
                 const handleChange = (e) => {
                     const newValue = e.target.value;
                     setValue(newValue);
@@ -203,7 +191,7 @@
                     
                     // 1秒後に保存
                     timeoutRef.current = setTimeout(() => {
-                        updateMemoStable(songId, newValue);
+                        onUpdate(songId, newValue);
                     }, 1000);
                 };
 
@@ -212,6 +200,8 @@
                     return () => {
                         if (timeoutRef.current) {
                             clearTimeout(timeoutRef.current);
+                            // 最後の値を保存
+                            onUpdate(songId, value);
                         }
                     };
                 }, []);
@@ -222,6 +212,9 @@
                     placeholder: "この曲についてのメモ...",
                     className: "w-full h-20 p-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 });
+            }, (prevProps, nextProps) => {
+                // songIdが同じならば再レンダリングしない
+                return prevProps.songId === nextProps.songId;
             });
 
             // ホーム画面
@@ -237,7 +230,7 @@
                                 React.createElement('p', { className: "text-sm mb-3" }, connectionStatus),
                                 React.createElement('p', { className: "text-xs opacity-80" },
                                     'データはブラウザに保存されます。', React.createElement('br'),
-                                    'メモ入力が改善されました！'
+                                    'メモ入力の問題を修正しました！'
                                 )
                             )
                         ),
@@ -318,9 +311,10 @@
                                     React.createElement('div', { className: "mt-3" },
                                         React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-1" }, 'メモ'),
                                         React.createElement(StableMemoTextArea, { 
-                                            key: `memo-vote-${song.id}`,
+                                            key: `memo-${song.id}`,
                                             songId: song.id, 
-                                            currentValue: memos[song.id] 
+                                            initialValue: memos[song.id],
+                                            onUpdate: updateMemoStable
                                         })
                                     ),
                                     selectedSong === song.id && React.createElement('div', { className: "mt-6 pt-6 border-t" },
@@ -424,9 +418,10 @@
                                     React.createElement('div', { className: "mt-3" },
                                         React.createElement('label', { className: "block text-sm font-medium text-gray-700 mb-1" }, 'メモ'),
                                         React.createElement(StableMemoTextArea, { 
-                                            key: `memo-result-${song.id}`,
+                                            key: `memo-${song.id}`,
                                             songId: song.id, 
-                                            currentValue: memos[song.id] 
+                                            initialValue: memos[song.id],
+                                            onUpdate: updateMemoStable
                                         })
                                     )
                                 ),
