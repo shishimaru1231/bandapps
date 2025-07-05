@@ -173,6 +173,7 @@
             const [dragOverIndex, setDragOverIndex] = useState(null);
             const [showNewSongForm, setShowNewSongForm] = useState(false);
             const [newSong, setNewSong] = useState({ title: '', duration: '' });
+            const [searchQuery, setSearchQuery] = useState('');
 
             // セットリスト一覧を取得
             useEffect(() => {
@@ -183,7 +184,9 @@
                     const data = snapshot.val() || {};
                     const setlistArray = Object.entries(data).map(([id, setlist]) => ({
                         id,
-                        ...setlist
+                        name: setlist.name || '無題のセットリスト',
+                        date: setlist.date || new Date().toISOString(),
+                        songs: setlist.songs || []
                     }));
                     setSetlists(setlistArray);
                 });
@@ -200,7 +203,8 @@
                     const data = snapshot.val() || {};
                     const songsArray = Object.entries(data).map(([id, song]) => ({
                         id,
-                        ...song
+                        title: song.title || '無題',
+                        duration: song.duration || '3:00'
                     }));
                     setAllSongs(songsArray);
                 });
@@ -215,7 +219,13 @@
                 const setlistSongsRef = database.ref(`setlists/${currentSetlist.id}/songs`);
                 setlistSongsRef.on('value', (snapshot) => {
                     const data = snapshot.val() || [];
-                    setSetlistSongs(data);
+                    // データの整合性を確保
+                    const validatedSongs = data.map(song => ({
+                        id: song.id || Math.random().toString(36).substr(2, 9),
+                        title: song.title || '無題',
+                        duration: song.duration || '3:00'
+                    }));
+                    setSetlistSongs(validatedSongs);
                 });
 
                 return () => setlistSongsRef.off();
@@ -245,11 +255,11 @@
 
             // 新しい曲を追加
             const addNewSong = () => {
-                if (!newSong.title) return;
+                if (!newSong.title.trim()) return;
                 
                 const song = {
-                    title: newSong.title,
-                    duration: newSong.duration || '3:00'
+                    title: newSong.title.trim(),
+                    duration: newSong.duration.trim() || '3:00'
                 };
                 
                 if (database) {
@@ -293,7 +303,13 @@
                 } else {
                     // 全曲リストから追加
                     const insertIndex = targetIndex !== null ? targetIndex : newSongs.length;
-                    newSongs.splice(insertIndex, 0, draggedSong);
+                    // データの整合性を確保
+                    const songToAdd = {
+                        id: draggedSong.id || Math.random().toString(36).substr(2, 9),
+                        title: draggedSong.title || '無題',
+                        duration: draggedSong.duration || '3:00'
+                    };
+                    newSongs.splice(insertIndex, 0, songToAdd);
                 }
                 
                 if (database) {
@@ -320,9 +336,12 @@
                 let totalSeconds = 0;
                 
                 setlistSongs.forEach(song => {
-                    if (song.duration) {
-                        const [min, sec] = song.duration.split(':').map(Number);
-                        totalSeconds += (min * 60) + (sec || 0);
+                    if (song.duration && typeof song.duration === 'string') {
+                        const parts = song.duration.split(':');
+                        if (parts.length === 2) {
+                            const [min, sec] = parts.map(p => parseInt(p) || 0);
+                            totalSeconds += (min * 60) + sec;
+                        }
                     }
                 });
                 
@@ -330,6 +349,15 @@
                 const seconds = totalSeconds % 60;
                 return `${minutes}:${seconds.toString().padStart(2, '0')}`;
             };
+
+            // 曲をフィルタリング
+            const filteredSongs = searchQuery.trim() === '' 
+                ? allSongs 
+                : allSongs.filter(song => {
+                    const title = (song.title || '').toLowerCase();
+                    const query = searchQuery.toLowerCase();
+                    return title.includes(query);
+                });
 
             return (
                 <div className="min-h-screen p-4">
@@ -411,7 +439,7 @@
                                 {currentSetlist ? (
                                     setlistSongs.length > 0 ? (
                                         setlistSongs.map((song, index) => (
-                                            <div key={index}>
+                                            <div key={`${song.id}-${index}`}>
                                                 <div
                                                     className={`song-card ${draggedSong?.index === index ? 'dragging' : ''}`}
                                                     draggable
@@ -463,6 +491,15 @@
                         <div className="glass-card p-6">
                             <h2 className="text-xl font-bold mb-4">全曲リスト</h2>
                             
+                            {/* 検索バー */}
+                            <input
+                                type="text"
+                                placeholder="曲を検索..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full mb-4 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
+                            />
+                            
                             {showNewSongForm ? (
                                 <div className="mb-4 p-4 bg-black/20 rounded-lg">
                                     <input
@@ -507,7 +544,7 @@
                             )}
                             
                             <div className="space-y-2 max-h-96 overflow-y-auto">
-                                {allSongs.map(song => (
+                                {filteredSongs.map(song => (
                                     <div
                                         key={song.id}
                                         className="song-card"
