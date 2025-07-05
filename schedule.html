@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スケジュール管理 📅 | バンド活動</title>
+    
+    <!-- ファビコン設定 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📅</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📅</text></svg>">
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        body { 
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: #0f0f23;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(34, 211, 238, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(251, 191, 36, 0.2) 0%, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .calendar-cell {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            min-height: 100px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .calendar-cell:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .calendar-cell.other-month {
+            opacity: 0.3;
+        }
+        
+        .calendar-cell.today {
+            background: rgba(34, 211, 238, 0.2);
+            border: 2px solid rgba(34, 211, 238, 0.5);
+        }
+        
+        .event-badge {
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 2px;
+            display: inline-block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        .event-practice { background: rgba(34, 197, 94, 0.3); color: #86efac; }
+        .event-live { background: rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .event-meeting { background: rgba(59, 130, 246, 0.3); color: #93bbfc; }
+        .event-other { background: rgba(168, 85, 247, 0.3); color: #d8b4fe; }
+        
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-content {
+            animation: slideUp 0.3s ease;
+        }
+        
+        .attendance-member {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            margin: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .attendance-yes {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+        
+        .attendance-no {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
+        .attendance-maybe {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: rgba(251, 191, 36, 0.5);
+        }
+        
+        .attendance-none {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* カスタムスクロールバー */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #2563eb, #7c3aed);
+        }
+    </style>
+</head>
+<body>
+    <div id="root">読み込み中...</div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Firebaseの設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+            authDomain: "band-apps.firebaseapp.com",
+            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+            projectId: "band-apps",
+            storageBucket: "band-apps.firebasestorage.app",
+            messagingSenderId: "238355659055",
+            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+            measurementId: "G-T5ZYHTSS3L"
+        };
+
+        // Firebase初期化
+        let firebaseInitialized = false;
+        let database = null;
+
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+            }
+        } catch (error) {
+            console.error("Firebase初期化エラー:", error);
+        }
+
+        const ScheduleApp = () => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [selectedDate, setSelectedDate] = useState(null);
+            const [events, setEvents] = useState({});
+            const [showEventModal, setShowEventModal] = useState(false);
+            const [editingEvent, setEditingEvent] = useState(null);
+            const [connectionStatus, setConnectionStatus] = useState('確認中...');
+            const [currentUser, setCurrentUser] = useState('');
+            const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+
+            // メンバーリスト（実際の使用時は設定可能にする）
+            const members = ['sola', 'ししまる', 'まり', 'なかしゅん', 'あつしんぐ'];
+
+            // イベントタイプ
+            const eventTypes = [
+                { id: 'practice', label: '練習', color: 'event-practice', icon: '🎵' },
+                { id: 'live', label: 'ライブ', color: 'event-live', icon: '🎤' },
+                { id: 'meeting', label: 'ミーティング', color: 'event-meeting', icon: '💬' },
+                { id: 'other', label: 'その他', color: 'event-other', icon: '📌' }
+            ];
+
+            // Firebase接続
+            useEffect(() => {
+                if (!firebaseInitialized || !database) {
+                    setConnectionStatus('ローカルモード');
+                    // ローカルストレージから読み込み
+                    const savedEvents = localStorage.getItem('bandScheduleEvents');
+                    const savedUser = localStorage.getItem('bandCurrentUser');
+                    if (savedEvents) setEvents(JSON.parse(savedEvents));
+                    if (savedUser) setCurrentUser(savedUser);
+                    return;
+                }
+
+                // オンライン状態の管理
+                const presenceRef = database.ref('.info/connected');
+                const userRef = database.ref(`presence/${sessionId}`);
+                
+                presenceRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        userRef.set(true);
+                        userRef.onDisconnect().remove();
+                        setConnectionStatus('オンライン');
+                    } else {
+                        setConnectionStatus('オフライン');
+                    }
+                });
+
+                // イベントデータの監視
+                const eventsRef = database.ref('schedules');
+                eventsRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setEvents(data);
+                });
+
+                return () => {
+                    if (database) {
+                        presenceRef.off();
+                        eventsRef.off();
+                        userRef.remove();
+                    }
+                };
+            }, [sessionId]);
+
+            // ローカルストレージへの保存
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandScheduleEvents', JSON.stringify(events));
+                }
+            }, [events]);
+
+            useEffect(() => {
+                localStorage.setItem('bandCurrentUser', currentUser);
+            }, [currentUser]);
+
+            // カレンダーの日付を取得
+            const getDaysInMonth = (date) => {
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                const startingDayOfWeek = firstDay.getDay();
+
+                const days = [];
+                
+                // 前月の日付
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+                    days.push({
+                        date: new Date(year, month - 1, prevMonthLastDay - i),
+                        isCurrentMonth: false
+                    });
+                }
+
+                // 当月の日付
+                for (let i = 1; i <= daysInMonth; i++) {
+                    days.push({
+                        date: new Date(year, month, i),
+                        isCurrentMonth: true
+                    });
+                }
+
+                // 次月の日付
+                const remainingDays = 42 - days.length;
+                for (let i = 1; i <= remainingDays; i++) {
+                    days.push({
+                        date: new Date(year, month + 1, i),
+                        isCurrentMonth: false
+                    });
+                }
+
+                return days;
+            };
+
+            // 日付をキーに変換
+            const getDateKey = (date) => {
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            };
+
+            // イベントの保存
+            const saveEvent = (event) => {
+                const dateKey = getDateKey(new Date(event.date));
+                const eventId = event.id || Date.now().toString();
+                const eventData = {
+                    ...event,
+                    id: eventId,
+                    createdBy: currentUser,
+                    createdAt: Date.now()
+                };
+
+                if (firebaseInitialized && database) {
+                    database.ref(`schedules/${dateKey}/${eventId}`).set(eventData);
+                } else {
+                    const newEvents = { ...events };
+                    if (!newEvents[dateKey]) newEvents[dateKey] = {};
+                    newEvents[dateKey][eventId] = eventData;
+                    setEvents(newEvents);
+                }
+
+                setShowEventModal(false);
+                setEditingEvent(null);
+            };
+
+            // イベントの削除
+            const deleteEvent = (dateKey, eventId) => {
+                if (firebaseInitialized && database) {
+                    database.ref(`schedules/${dateKey}/${eventId}`).remove();
+                } else {
+                    const newEvents = { ...events };
+                    delete newEvents[dateKey][eventId];
+                    if (Object.keys(newEvents[dateKey]).length === 0) {
+                        delete newEvents[dateKey];
+                    }
+                    setEvents(newEvents);
+                }
+            };
+
+            // 出欠の更新
+            const updateAttendance = (dateKey, eventId, status) => {
+                if (!currentUser) {
+                    alert('名前を設定してください');
+                    return;
+                }
+
+                const event = events[dateKey]?.[eventId];
+                if (!event) return;
+
+                const attendance = event.attendance || {};
+                attendance[currentUser] = status;
+
+                if (firebaseInitialized && database) {
+                    database.ref(`schedules/${dateKey}/${eventId}/attendance`).set(attendance);
+                } else {
+                    const newEvents = { ...events };
+                    newEvents[dateKey][eventId].attendance = attendance;
+                    setEvents(newEvents);
+                }
+            };
+
+            // イベントモーダルコンポーネント
+            const EventModal = ({ onClose, event, date }) => {
+                const [formData, setFormData] = useState({
+                    title: event?.title || '',
+                    type: event?.type || 'practice',
+                    date: event?.date || (date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : ''),
+                    time: event?.time || '19:00',
+                    location: event?.location || '',
+                    memo: event?.memo || '',
+                    attendance: event?.attendance || {}
+                });
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (!formData.title || !formData.date) {
+                        alert('タイトルと日付は必須です');
+                        return;
+                    }
+                    saveEvent({ ...formData, id: event?.id });
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-lg w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: "text-2xl font-bold mb-4" }, 
+                            event ? 'イベントを編集' : '新しいイベント'
+                        ),
+                        React.createElement('form', { onSubmit: handleSubmit },
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'タイトル'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.title,
+                                    onChange: (e) => setFormData({ ...formData, title: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400",
+                                    required: true
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'タイプ'),
+                                React.createElement('select', {
+                                    value: formData.type,
+                                    onChange: (e) => setFormData({ ...formData, type: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400"
+                                },
+                                    eventTypes.map(type =>
+                                        React.createElement('option', { 
+                                            key: type.id, 
+                                            value: type.id,
+                                            style: { background: '#1a1a2e' }
+                                        }, type.label)
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4 mb-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block text-sm font-medium mb-2" }, '日付'),
+                                    React.createElement('input', {
+                                        type: "date",
+                                        value: formData.date,
+                                        onChange: (e) => setFormData({ ...formData, date: e.target.value }),
+                                        className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400",
+                                        required: true
+                                    })
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block text-sm font-medium mb-2" }, '時間'),
+                                    React.createElement('input', {
+                                        type: "time",
+                                        value: formData.time,
+                                        onChange: (e) => setFormData({ ...formData, time: e.target.value }),
+                                        className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400"
+                                    })
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '場所'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.location,
+                                    onChange: (e) => setFormData({ ...formData, location: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400",
+                                    placeholder: "スタジオA、ライブハウスなど"
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'メモ'),
+                                React.createElement('textarea', {
+                                    value: formData.memo,
+                                    onChange: (e) => setFormData({ ...formData, memo: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400",
+                                    rows: 3,
+                                    placeholder: "持ち物、注意事項など"
+                                })
+                            ),
+                            React.createElement('div', { className: "flex gap-3" },
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary flex-1"
+                                }, '保存'),
+                                React.createElement('button', {
+                                    type: "button",
+                                    onClick: onClose,
+                                    className: "btn-secondary flex-1"
+                                }, 'キャンセル')
+                            )
+                        )
+                    )
+                );
+            };
+
+            // イベント詳細モーダル
+            const EventDetailModal = ({ event, dateKey, onClose }) => {
+                const eventType = eventTypes.find(t => t.id === event.type);
+                const attendance = event.attendance || {};
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-lg w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "flex items-start justify-between mb-4" },
+                            React.createElement('div', null,
+                                React.createElement('div', { className: "flex items-center gap-2 mb-2" },
+                                    React.createElement('span', { className: "text-2xl" }, eventType?.icon),
+                                    React.createElement('h2', { className: "text-2xl font-bold" }, event.title)
+                                ),
+                                React.createElement('span', { className: `event-badge ${eventType?.color}` }, eventType?.label)
+                            ),
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: "text-gray-400 hover:text-white text-2xl"
+                            }, '×')
+                        ),
+                        React.createElement('div', { className: "space-y-3 mb-6" },
+                            React.createElement('div', { className: "flex items-center gap-2" },
+                                React.createElement('span', null, '📅'),
+                                React.createElement('span', null, 
+                                    new Date(event.date).toLocaleDateString('ja-JP', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        weekday: 'long'
+                                    })
+                                )
+                            ),
+                            event.time && React.createElement('div', { className: "flex items-center gap-2" },
+                                React.createElement('span', null, '🕐'),
+                                React.createElement('span', null, event.time)
+                            ),
+                            event.location && React.createElement('div', { className: "flex items-center gap-2" },
+                                React.createElement('span', null, '📍'),
+                                React.createElement('span', null, event.location)
+                            ),
+                            event.memo && React.createElement('div', { className: "flex items-start gap-2" },
+                                React.createElement('span', null, '📝'),
+                                React.createElement('span', { className: "whitespace-pre-wrap" }, event.memo)
+                            )
+                        ),
+                        React.createElement('div', { className: "mb-6" },
+                            React.createElement('h3', { className: "font-bold mb-3" }, '出欠確認'),
+                            React.createElement('div', { className: "space-y-2" },
+                                members.map(member => {
+                                    const status = attendance[member];
+                                    return React.createElement('div', { 
+                                        key: member,
+                                        className: "flex items-center justify-between"
+                                    },
+                                        React.createElement('span', null, member),
+                                        React.createElement('div', { className: "flex gap-2" },
+                                            ['yes', 'maybe', 'no'].map(s => 
+                                                React.createElement('button', {
+                                                    key: s,
+                                                    onClick: () => updateAttendance(dateKey, event.id, s),
+                                                    className: `px-3 py-1 rounded-lg text-sm ${
+                                                        status === s ? 
+                                                        (s === 'yes' ? 'bg-green-500' : s === 'no' ? 'bg-red-500' : 'bg-yellow-500') :
+                                                        'bg-white/10'
+                                                    } ${member === currentUser ? 'cursor-pointer' : 'cursor-default opacity-50'} transition-all`,
+                                                    disabled: member !== currentUser
+                                                }, s === 'yes' ? '○' : s === 'maybe' ? '△' : '×')
+                                            )
+                                        )
+                                    );
+                                })
+                            )
+                        ),
+                        React.createElement('div', { className: "flex gap-3" },
+                            React.createElement('button', {
+                                onClick: () => {
+                                    setEditingEvent(event);
+                                    setSelectedDate(new Date(event.date));
+                                    setShowEventModal(true);
+                                },
+                                className: "btn-secondary flex-1"
+                            }, '編集'),
+                            React.createElement('button', {
+                                onClick: () => {
+                                    if (confirm('このイベントを削除しますか？')) {
+                                        deleteEvent(dateKey, event.id);
+                                        onClose();
+                                    }
+                                },
+                                className: "btn-secondary flex-1"
+                            }, '削除')
+                        )
+                    )
+                );
+            };
+
+            const days = getDaysInMonth(currentDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const [viewingEvent, setViewingEvent] = useState(null);
+            const [viewingDateKey, setViewingDateKey] = useState(null);
+
+            return React.createElement('div', { className: "min-h-screen p-4" },
+                // ヘッダー
+                React.createElement('header', { className: "glass-card mb-6 max-w-7xl mx-auto" },
+                    React.createElement('div', { className: "p-6" },
+                        React.createElement('div', { className: "flex flex-col lg:flex-row justify-between items-center gap-4" },
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('a', {
+                                    href: "home.html",
+                                    className: "text-cyan-400 hover:text-cyan-300 transition-colors"
+                                }, '← ハブに戻る'),
+                                React.createElement('h1', { className: "text-3xl font-bold" }, '📅 スケジュール管理')
+                            ),
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('div', { className: "flex items-center gap-2" },
+                                    React.createElement('span', { className: "text-sm text-gray-400" }, 'あなたの名前:'),
+                                    React.createElement('select', {
+                                        value: currentUser,
+                                        onChange: (e) => setCurrentUser(e.target.value),
+                                        className: "p-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-cyan-400"
+                                    },
+                                        React.createElement('option', { value: "", style: { background: '#1a1a2e' } }, '選択してください'),
+                                        members.map(member =>
+                                            React.createElement('option', { 
+                                                key: member, 
+                                                value: member,
+                                                style: { background: '#1a1a2e' }
+                                            }, member)
+                                        )
+                                    )
+                                ),
+                                React.createElement('span', {
+                                    className: `text-sm ${connectionStatus === 'オンライン' ? 'text-green-400' : 'text-gray-400'}`
+                                }, connectionStatus)
+                            )
+                        )
+                    )
+                ),
+
+                // カレンダー
+                React.createElement('main', { className: "max-w-7xl mx-auto" },
+                    React.createElement('div', { className: "glass-card" },
+                        // カレンダーヘッダー
+                        React.createElement('div', { className: "p-4 border-b border-white/10" },
+                            React.createElement('div', { className: "flex justify-between items-center" },
+                                React.createElement('button', {
+                                    onClick: () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)),
+                                    className: "p-2 rounded-lg hover:bg-white/10 transition-colors"
+                                }, '←'),
+                                React.createElement('h2', { className: "text-xl font-bold" },
+                                    currentDate.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)),
+                                    className: "p-2 rounded-lg hover:bg-white/10 transition-colors"
+                                }, '→')
+                            )
+                        ),
+
+                        // 曜日ヘッダー
+                        React.createElement('div', { className: "grid grid-cols-7 gap-2 p-4 border-b border-white/10" },
+                            ['日', '月', '火', '水', '木', '金', '土'].map((day, index) =>
+                                React.createElement('div', {
+                                    key: day,
+                                    className: `text-center text-sm font-bold ${index === 0 ? 'text-red-400' : index === 6 ? 'text-blue-400' : ''}`
+                                }, day)
+                            )
+                        ),
+
+                        // カレンダー本体
+                        React.createElement('div', { className: "grid grid-cols-7 gap-2 p-4" },
+                            days.map((day, index) => {
+                                const dateKey = getDateKey(day.date);
+                                const dayEvents = events[dateKey] || {};
+                                const dayEventsList = Object.values(dayEvents);
+                                const isToday = day.date.toDateString() === today.toDateString();
+
+                                return React.createElement('div', {
+                                    key: index,
+                                    className: `calendar-cell p-2 ${day.isCurrentMonth ? '' : 'other-month'} ${isToday ? 'today' : ''}`,
+                                    onClick: () => {
+                                        setSelectedDate(day.date);
+                                        setShowEventModal(true);
+                                        setEditingEvent(null);
+                                    }
+                                },
+                                    React.createElement('div', { className: "font-bold mb-1" }, day.date.getDate()),
+                                    React.createElement('div', { className: "space-y-1" },
+                                        dayEventsList.slice(0, 3).map(event => {
+                                            const eventType = eventTypes.find(t => t.id === event.type);
+                                            return React.createElement('div', {
+                                                key: event.id,
+                                                className: `event-badge ${eventType?.color} cursor-pointer`,
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    setViewingEvent(event);
+                                                    setViewingDateKey(dateKey);
+                                                },
+                                                title: event.title
+                                            }, 
+                                                React.createElement('span', { className: "mr-1" }, eventType?.icon),
+                                                event.title
+                                            );
+                                        }),
+                                        dayEventsList.length > 3 && React.createElement('div', {
+                                            className: "text-xs text-gray-400 text-center"
+                                        }, `他${dayEventsList.length - 3}件`)
+                                    )
+                                );
+                            })
+                        )
+                    ),
+
+                    // 今月の予定一覧
+                    React.createElement('div', { className: "glass-card mt-6 p-6" },
+                        React.createElement('h3', { className: "text-xl font-bold mb-4" }, '今月の予定'),
+                        React.createElement('div', { className: "space-y-2" },
+                            Object.entries(events)
+                                .filter(([dateKey]) => {
+                                    const eventDate = new Date(dateKey);
+                                    return eventDate.getMonth() === currentDate.getMonth() && 
+                                           eventDate.getFullYear() === currentDate.getFullYear();
+                                })
+                                .sort(([a], [b]) => new Date(a) - new Date(b))
+                                .map(([dateKey, dayEvents]) =>
+                                    Object.values(dayEvents).map(event => {
+                                        const eventType = eventTypes.find(t => t.id === event.type);
+                                        const attendance = event.attendance || {};
+                                        const attendanceCount = Object.values(attendance).filter(a => a === 'yes').length;
+
+                                        return React.createElement('div', {
+                                            key: event.id,
+                                            className: "flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors cursor-pointer",
+                                            onClick: () => {
+                                                setViewingEvent(event);
+                                                setViewingDateKey(dateKey);
+                                            }
+                                        },
+                                            React.createElement('div', { className: "flex items-center gap-3" },
+                                                React.createElement('span', { className: "text-2xl" }, eventType?.icon),
+                                                React.createElement('div', null,
+                                                    React.createElement('div', { className: "font-bold" }, event.title),
+                                                    React.createElement('div', { className: "text-sm text-gray-400" }, 
+                                                        new Date(event.date).toLocaleDateString('ja-JP', { 
+                                                            month: 'numeric', 
+                                                            day: 'numeric',
+                                                            weekday: 'short'
+                                                        }),
+                                                        event.time && ` ${event.time}`,
+                                                        event.location && ` @ ${event.location}`
+                                                    )
+                                                )
+                                            ),
+                                            React.createElement('div', { className: "text-sm text-gray-400" },
+                                                `参加: ${attendanceCount}/${members.length}`
+                                            )
+                                        );
+                                    })
+                                )
+                        ),
+                        Object.keys(events).length === 0 && React.createElement('p', { 
+                            className: "text-center text-gray-400 py-8" 
+                        }, '予定がありません')
+                    )
+                ),
+
+                // モーダル
+                showEventModal && React.createElement(EventModal, {
+                    event: editingEvent,
+                    date: selectedDate,
+                    onClose: () => {
+                        setShowEventModal(false);
+                        setEditingEvent(null);
+                        setSelectedDate(null);
+                    }
+                }),
+
+                viewingEvent && React.createElement(EventDetailModal, {
+                    event: viewingEvent,
+                    dateKey: viewingDateKey,
+                    onClose: () => {
+                        setViewingEvent(null);
+                        setViewingDateKey(null);
+                    }
+                })
+            );
+        };
+
+        ReactDOM.render(React.createElement(ScheduleApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
