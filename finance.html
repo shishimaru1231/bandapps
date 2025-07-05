@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>収支管理 💰 | バンド活動</title>
+    
+    <!-- ファビコン設定 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>💰</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>💰</text></svg>">
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        body { 
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: #18181b;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(251, 191, 36, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(251, 146, 60, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(245, 158, 11, 0.2) 0%, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(251, 146, 60, 0.1) 100%);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(251, 191, 36, 0.2);
+        }
+        
+        .transaction-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        
+        .transaction-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .income {
+            border-left: 4px solid #22c55e;
+        }
+        
+        .expense {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: #18181b;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(251, 191, 36, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-content {
+            animation: slideUp 0.3s ease;
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .category-studio { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
+        .category-live { background: rgba(236, 72, 153, 0.2); color: #fbcfe8; }
+        .category-equipment { background: rgba(59, 130, 246, 0.2); color: #bfdbfe; }
+        .category-other { background: rgba(107, 114, 128, 0.2); color: #e5e7eb; }
+        
+        .member-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            margin: 2px;
+        }
+        
+        .balance-positive { color: #86efac; }
+        .balance-negative { color: #fca5a5; }
+        .balance-zero { color: #fde047; }
+        
+        .tab-button {
+            padding: 12px 24px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tab-button.active {
+            background: rgba(251, 191, 36, 0.2);
+            border-color: rgba(251, 191, 36, 0.5);
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            height: 300px;
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+        }
+        
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, #fbbf24, #f59e0b);
+            border-radius: 8px 8px 0 0;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .chart-bar:hover {
+            transform: translateY(-4px);
+            filter: brightness(1.1);
+        }
+        
+        .chart-bar.expense {
+            background: linear-gradient(to top, #ef4444, #dc2626);
+        }
+        
+        .split-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        
+        /* スクロールバー */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #fbbf24, #f59e0b);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #f59e0b, #d97706);
+        }
+        
+        @keyframes count-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .count-up {
+            animation: count-up 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">読み込み中...</div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // Firebaseの設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+            authDomain: "band-apps.firebaseapp.com",
+            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+            projectId: "band-apps",
+            storageBucket: "band-apps.firebasestorage.app",
+            messagingSenderId: "238355659055",
+            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+            measurementId: "G-T5ZYHTSS3L"
+        };
+
+        // Firebase初期化
+        let firebaseInitialized = false;
+        let database = null;
+
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+            }
+        } catch (error) {
+            console.error("Firebase初期化エラー:", error);
+        }
+
+        const FinanceApp = () => {
+            const [transactions, setTransactions] = useState({});
+            const [showNewTransactionModal, setShowNewTransactionModal] = useState(false);
+            const [selectedTransaction, setSelectedTransaction] = useState(null);
+            const [activeTab, setActiveTab] = useState('overview');
+            const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+            const [connectionStatus, setConnectionStatus] = useState('確認中...');
+            const [currentUser, setCurrentUser] = useState('');
+            const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+
+            // メンバーリスト
+            const members = ['sola', 'ししまる', 'まり', 'なかしゅん', 'あつしんぐ'];
+
+            // カテゴリー
+            const categories = [
+                { id: 'studio', label: 'スタジオ代', icon: '🎵', class: 'category-studio' },
+                { id: 'live', label: 'ライブ', icon: '🎤', class: 'category-live' },
+                { id: 'equipment', label: '機材', icon: '🎸', class: 'category-equipment' },
+                { id: 'other', label: 'その他', icon: '📦', class: 'category-other' }
+            ];
+
+            // Firebase接続
+            useEffect(() => {
+                if (!firebaseInitialized || !database) {
+                    setConnectionStatus('ローカルモード');
+                    // ローカルストレージから読み込み
+                    const savedTransactions = localStorage.getItem('bandFinanceTransactions');
+                    const savedUser = localStorage.getItem('bandCurrentUser');
+                    if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+                    if (savedUser) setCurrentUser(savedUser);
+                    return;
+                }
+
+                // オンライン状態の管理
+                const presenceRef = database.ref('.info/connected');
+                const userRef = database.ref(`presence/${sessionId}`);
+                
+                presenceRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        userRef.set(true);
+                        userRef.onDisconnect().remove();
+                        setConnectionStatus('オンライン');
+                    } else {
+                        setConnectionStatus('オフライン');
+                    }
+                });
+
+                // 取引データの監視
+                const transactionsRef = database.ref('finance/transactions');
+                transactionsRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setTransactions(data);
+                });
+
+                return () => {
+                    if (database) {
+                        presenceRef.off();
+                        transactionsRef.off();
+                        userRef.remove();
+                    }
+                };
+            }, [sessionId]);
+
+            // ローカルストレージへの保存
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandFinanceTransactions', JSON.stringify(transactions));
+                }
+            }, [transactions]);
+
+            useEffect(() => {
+                localStorage.setItem('bandCurrentUser', currentUser);
+            }, [currentUser]);
+
+            // 取引を追加
+            const addTransaction = (transactionData) => {
+                const id = Date.now().toString();
+                const newTransaction = {
+                    id,
+                    ...transactionData,
+                    createdBy: currentUser,
+                    createdAt: Date.now()
+                };
+
+                if (firebaseInitialized && database) {
+                    database.ref(`finance/transactions/${id}`).set(newTransaction);
+                } else {
+                    setTransactions(prev => ({ ...prev, [id]: newTransaction }));
+                }
+
+                setShowNewTransactionModal(false);
+            };
+
+            // 取引を削除
+            const deleteTransaction = (transactionId) => {
+                if (confirm('この取引を削除しますか？')) {
+                    if (firebaseInitialized && database) {
+                        database.ref(`finance/transactions/${transactionId}`).remove();
+                    } else {
+                        const newTransactions = { ...transactions };
+                        delete newTransactions[transactionId];
+                        setTransactions(newTransactions);
+                    }
+                    setSelectedTransaction(null);
+                }
+            };
+
+            // 統計計算
+            const statistics = useMemo(() => {
+                const allTransactions = Object.values(transactions);
+                const monthTransactions = allTransactions.filter(t => 
+                    t.date && t.date.startsWith(selectedMonth)
+                );
+
+                // 全体統計
+                const totalIncome = allTransactions
+                    .filter(t => t.type === 'income')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0);
+                
+                const totalExpense = allTransactions
+                    .filter(t => t.type === 'expense')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+                // 月次統計
+                const monthIncome = monthTransactions
+                    .filter(t => t.type === 'income')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0);
+                
+                const monthExpense = monthTransactions
+                    .filter(t => t.type === 'expense')
+                    .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+                // カテゴリー別
+                const byCategory = {};
+                categories.forEach(cat => {
+                    byCategory[cat.id] = monthTransactions
+                        .filter(t => t.category === cat.id && t.type === 'expense')
+                        .reduce((sum, t) => sum + (t.amount || 0), 0);
+                });
+
+                // メンバー別精算
+                const memberBalances = {};
+                members.forEach(member => {
+                    const paid = allTransactions
+                        .filter(t => t.paidBy === member)
+                        .reduce((sum, t) => sum + (t.amount || 0), 0);
+                    
+                    const shouldPay = allTransactions
+                        .filter(t => t.splitMembers && t.splitMembers.includes(member))
+                        .reduce((sum, t) => sum + ((t.amount || 0) / (t.splitMembers?.length || 1)), 0);
+                    
+                    memberBalances[member] = paid - shouldPay;
+                });
+
+                return {
+                    totalIncome,
+                    totalExpense,
+                    totalBalance: totalIncome - totalExpense,
+                    monthIncome,
+                    monthExpense,
+                    monthBalance: monthIncome - monthExpense,
+                    byCategory,
+                    memberBalances
+                };
+            }, [transactions, selectedMonth]);
+
+            // 月別データ取得
+            const getMonthlyData = () => {
+                const monthlyData = {};
+                const currentDate = new Date();
+                
+                for (let i = 5; i >= 0; i--) {
+                    const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+                    const monthKey = date.toISOString().slice(0, 7);
+                    const monthTransactions = Object.values(transactions).filter(t => 
+                        t.date && t.date.startsWith(monthKey)
+                    );
+                    
+                    monthlyData[monthKey] = {
+                        income: monthTransactions
+                            .filter(t => t.type === 'income')
+                            .reduce((sum, t) => sum + (t.amount || 0), 0),
+                        expense: monthTransactions
+                            .filter(t => t.type === 'expense')
+                            .reduce((sum, t) => sum + (t.amount || 0), 0)
+                    };
+                }
+                
+                return monthlyData;
+            };
+
+            // 金額フォーマット
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('ja-JP', {
+                    style: 'currency',
+                    currency: 'JPY'
+                }).format(amount);
+            };
+
+            // 新規取引モーダル
+            const NewTransactionModal = ({ onClose }) => {
+                const [formData, setFormData] = useState({
+                    type: 'expense',
+                    title: '',
+                    amount: '',
+                    category: 'studio',
+                    date: new Date().toISOString().slice(0, 10),
+                    paidBy: currentUser || members[0],
+                    splitMembers: [...members],
+                    memo: ''
+                });
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (!formData.title || !formData.amount) {
+                        alert('タイトルと金額は必須です');
+                        return;
+                    }
+                    addTransaction({
+                        ...formData,
+                        amount: parseFloat(formData.amount)
+                    });
+                };
+
+                const toggleSplitMember = (member) => {
+                    const current = formData.splitMembers || [];
+                    if (current.includes(member)) {
+                        setFormData({
+                            ...formData,
+                            splitMembers: current.filter(m => m !== member)
+                        });
+                    } else {
+                        setFormData({
+                            ...formData,
+                            splitMembers: [...current, member]
+                        });
+                    }
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-lg w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: "text-2xl font-bold mb-4" }, '新規取引'),
+                        React.createElement('form', { onSubmit: handleSubmit },
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'タイプ'),
+                                React.createElement('div', { className: "flex gap-2" },
+                                    React.createElement('button', {
+                                        type: "button",
+                                        onClick: () => setFormData({ ...formData, type: 'income' }),
+                                        className: `flex-1 py-2 rounded-lg ${formData.type === 'income' ? 'bg-green-500/20 text-green-400 border border-green-500' : 'bg-white/10'} transition-all`
+                                    }, '💰 収入'),
+                                    React.createElement('button', {
+                                        type: "button",
+                                        onClick: () => setFormData({ ...formData, type: 'expense' }),
+                                        className: `flex-1 py-2 rounded-lg ${formData.type === 'expense' ? 'bg-red-500/20 text-red-400 border border-red-500' : 'bg-white/10'} transition-all`
+                                    }, '💸 支出')
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'タイトル'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.title,
+                                    onChange: (e) => setFormData({ ...formData, title: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400",
+                                    placeholder: "例: スタジオ練習（3時間）",
+                                    required: true
+                                })
+                            ),
+                            React.createElement('div', { className: "grid grid-cols-2 gap-4 mb-4" },
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block text-sm font-medium mb-2" }, '金額'),
+                                    React.createElement('input', {
+                                        type: "number",
+                                        value: formData.amount,
+                                        onChange: (e) => setFormData({ ...formData, amount: e.target.value }),
+                                        className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400",
+                                        placeholder: "5000",
+                                        required: true
+                                    })
+                                ),
+                                React.createElement('div', null,
+                                    React.createElement('label', { className: "block text-sm font-medium mb-2" }, '日付'),
+                                    React.createElement('input', {
+                                        type: "date",
+                                        value: formData.date,
+                                        onChange: (e) => setFormData({ ...formData, date: e.target.value }),
+                                        className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400"
+                                    })
+                                )
+                            ),
+                            formData.type === 'expense' && React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'カテゴリー'),
+                                React.createElement('div', { className: "grid grid-cols-2 gap-2" },
+                                    categories.map(cat =>
+                                        React.createElement('button', {
+                                            key: cat.id,
+                                            type: "button",
+                                            onClick: () => setFormData({ ...formData, category: cat.id }),
+                                            className: `px-4 py-2 rounded-lg ${formData.category === cat.id ? cat.class : 'bg-white/10'} transition-all`
+                                        }, 
+                                            React.createElement('span', { className: "mr-2" }, cat.icon),
+                                            cat.label
+                                        )
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '支払った人'),
+                                React.createElement('select', {
+                                    value: formData.paidBy,
+                                    onChange: (e) => setFormData({ ...formData, paidBy: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400"
+                                },
+                                    members.map(member =>
+                                        React.createElement('option', { 
+                                            key: member, 
+                                            value: member,
+                                            style: { background: '#18181b' }
+                                        }, member)
+                                    )
+                                )
+                            ),
+                            formData.type === 'expense' && React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '割り勘メンバー'),
+                                React.createElement('div', { className: "flex flex-wrap gap-2" },
+                                    members.map(member =>
+                                        React.createElement('button', {
+                                            key: member,
+                                            type: "button",
+                                            onClick: () => toggleSplitMember(member),
+                                            className: `px-3 py-1 rounded-full text-sm ${
+                                                formData.splitMembers?.includes(member) 
+                                                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500' 
+                                                    : 'bg-white/10'
+                                            } transition-all`
+                                        }, member)
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'メモ'),
+                                React.createElement('textarea', {
+                                    value: formData.memo,
+                                    onChange: (e) => setFormData({ ...formData, memo: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400",
+                                    rows: 3,
+                                    placeholder: "詳細情報など"
+                                })
+                            ),
+                            React.createElement('div', { className: "flex gap-3" },
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary flex-1"
+                                }, '登録'),
+                                React.createElement('button', {
+                                    type: "button",
+                                    onClick: onClose,
+                                    className: "btn-secondary flex-1"
+                                }, 'キャンセル')
+                            )
+                        )
+                    )
+                );
+            };
+
+            // 取引詳細モーダル
+            const TransactionDetailModal = ({ transaction, onClose }) => {
+                const category = categories.find(c => c.id === transaction.category);
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-lg w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "flex justify-between items-start mb-4" },
+                            React.createElement('div', null,
+                                React.createElement('h2', { className: "text-2xl font-bold mb-2" }, transaction.title),
+                                React.createElement('div', { className: "flex items-center gap-2" },
+                                    React.createElement('span', { 
+                                        className: `px-3 py-1 rounded-full text-sm font-medium ${
+                                            transaction.type === 'income' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                                        }` 
+                                    }, transaction.type === 'income' ? '収入' : '支出'),
+                                    category && React.createElement('span', { className: `category-badge ${category.class}` },
+                                        React.createElement('span', { className: "mr-1" }, category.icon),
+                                        category.label
+                                    )
+                                )
+                            ),
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: "text-gray-400 hover:text-white text-2xl"
+                            }, '×')
+                        ),
+                        React.createElement('div', { className: "space-y-4" },
+                            React.createElement('div', { className: "flex justify-between items-center" },
+                                React.createElement('span', { className: "text-gray-400" }, '金額'),
+                                React.createElement('span', { className: "text-2xl font-bold" }, 
+                                    formatCurrency(transaction.amount)
+                                )
+                            ),
+                            React.createElement('div', { className: "flex justify-between items-center" },
+                                React.createElement('span', { className: "text-gray-400" }, '日付'),
+                                React.createElement('span', null, 
+                                    new Date(transaction.date).toLocaleDateString('ja-JP')
+                                )
+                            ),
+                            React.createElement('div', { className: "flex justify-between items-center" },
+                                React.createElement('span', { className: "text-gray-400" }, '支払った人'),
+                                React.createElement('span', null, transaction.paidBy)
+                            ),
+                            transaction.splitMembers && transaction.splitMembers.length > 0 && 
+                                React.createElement('div', null,
+                                    React.createElement('span', { className: "text-gray-400 block mb-2" }, '割り勘メンバー'),
+                                    React.createElement('div', { className: "flex flex-wrap gap-2" },
+                                        transaction.splitMembers.map(member =>
+                                            React.createElement('span', { 
+                                                key: member, 
+                                                className: "member-chip" 
+                                            }, member)
+                                        )
+                                    ),
+                                    React.createElement('p', { className: "text-sm text-gray-500 mt-2" },
+                                        `1人あたり: ${formatCurrency(transaction.amount / transaction.splitMembers.length)}`
+                                    )
+                                ),
+                            transaction.memo && React.createElement('div', null,
+                                React.createElement('span', { className: "text-gray-400 block mb-2" }, 'メモ'),
+                                React.createElement('p', { className: "text-gray-300" }, transaction.memo)
+                            )
+                        ),
+                        React.createElement('div', { className: "mt-6 pt-6 border-t border-white/10" },
+                            transaction.createdBy === currentUser && React.createElement('button', {
+                                onClick: () => deleteTransaction(transaction.id),
+                                className: "w-full bg-red-500/20 text-red-400 py-2 rounded-lg hover:bg-red-500/30 transition-colors"
+                            }, '削除')
+                        )
+                    )
+                );
+            };
+
+            const monthlyData = getMonthlyData();
+
+            return React.createElement('div', { className: "min-h-screen p-4" },
+                // ヘッダー
+                React.createElement('header', { className: "glass-card mb-6 max-w-7xl mx-auto" },
+                    React.createElement('div', { className: "p-6" },
+                        React.createElement('div', { className: "flex flex-col lg:flex-row justify-between items-center gap-4" },
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('a', {
+                                    href: "home.html",
+                                    className: "text-yellow-400 hover:text-yellow-300 transition-colors"
+                                }, '← ハブに戻る'),
+                                React.createElement('h1', { className: "text-3xl font-bold" }, '💰 収支管理')
+                            ),
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('div', { className: "flex items-center gap-2" },
+                                    React.createElement('span', { className: "text-sm text-gray-400" }, '記録者:'),
+                                    React.createElement('select', {
+                                        value: currentUser,
+                                        onChange: (e) => setCurrentUser(e.target.value),
+                                        className: "p-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400"
+                                    },
+                                        React.createElement('option', { value: "", style: { background: '#18181b' } }, '選択してください'),
+                                        members.map(member =>
+                                            React.createElement('option', { 
+                                                key: member, 
+                                                value: member,
+                                                style: { background: '#18181b' }
+                                            }, member)
+                                        )
+                                    )
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => setShowNewTransactionModal(true),
+                                    className: "btn-primary"
+                                }, '+ 新規取引'),
+                                React.createElement('span', {
+                                    className: `text-sm ${connectionStatus === 'オンライン' ? 'text-green-400' : 'text-gray-400'}`
+                                }, connectionStatus)
+                            )
+                        )
+                    )
+                ),
+
+                // タブ切り替え
+                React.createElement('div', { className: "max-w-7xl mx-auto mb-6" },
+                    React.createElement('div', { className: "flex gap-2 flex-wrap" },
+                        React.createElement('button', {
+                            onClick: () => setActiveTab('overview'),
+                            className: `tab-button ${activeTab === 'overview' ? 'active' : ''}`
+                        }, '📊 概要'),
+                        React.createElement('button', {
+                            onClick: () => setActiveTab('transactions'),
+                            className: `tab-button ${activeTab === 'transactions' ? 'active' : ''}`
+                        }, '📝 取引履歴'),
+                        React.createElement('button', {
+                            onClick: () => setActiveTab('settlement'),
+                            className: `tab-button ${activeTab === 'settlement' ? 'active' : ''}`
+                        }, '💸 精算')
+                    )
+                ),
+
+                // メインコンテンツ
+                React.createElement('main', { className: "max-w-7xl mx-auto" },
+                    // 概要タブ
+                    activeTab === 'overview' && React.createElement('div', { className: "space-y-6" },
+                        // 統計カード
+                        React.createElement('div', { className: "grid md:grid-cols-3 gap-4" },
+                            React.createElement('div', { className: "stat-card" },
+                                React.createElement('p', { className: "text-sm text-gray-400 mb-1" }, '総収入'),
+                                React.createElement('p', { className: "text-2xl font-bold text-green-400 count-up" }, 
+                                    formatCurrency(statistics.totalIncome)
+                                )
+                            ),
+                            React.createElement('div', { className: "stat-card" },
+                                React.createElement('p', { className: "text-sm text-gray-400 mb-1" }, '総支出'),
+                                React.createElement('p', { className: "text-2xl font-bold text-red-400 count-up" }, 
+                                    formatCurrency(statistics.totalExpense)
+                                )
+                            ),
+                            React.createElement('div', { className: "stat-card" },
+                                React.createElement('p', { className: "text-sm text-gray-400 mb-1" }, '残高'),
+                                React.createElement('p', { 
+                                    className: `text-2xl font-bold count-up ${
+                                        statistics.totalBalance > 0 ? 'text-green-400' :
+                                        statistics.totalBalance < 0 ? 'text-red-400' :
+                                        'text-yellow-400'
+                                    }` 
+                                }, formatCurrency(statistics.totalBalance))
+                            )
+                        ),
+
+                        // 月次グラフ
+                        React.createElement('div', { className: "glass-card p-6" },
+                            React.createElement('h3', { className: "text-xl font-bold mb-4" }, '月次推移'),
+                            React.createElement('div', { className: "chart-container" },
+                                Object.entries(monthlyData).map(([month, data]) => {
+                                    const maxValue = Math.max(...Object.values(monthlyData).flatMap(d => [d.income, d.expense]));
+                                    return React.createElement('div', { 
+                                        key: month, 
+                                        className: "flex flex-col gap-2 flex-1" 
+                                    },
+                                        React.createElement('div', { 
+                                            className: "chart-bar", 
+                                            style: { height: `${(data.income / maxValue) * 100}%` },
+                                            title: `収入: ${formatCurrency(data.income)}`
+                                        }),
+                                        React.createElement('div', { 
+                                            className: "chart-bar expense", 
+                                            style: { height: `${(data.expense / maxValue) * 100}%` },
+                                            title: `支出: ${formatCurrency(data.expense)}`
+                                        }),
+                                        React.createElement('p', { className: "text-xs text-center text-gray-400" }, 
+                                            month.slice(5)
+                                        )
+                                    );
+                                })
+                            )
+                        ),
+
+                        // カテゴリー別支出
+                        React.createElement('div', { className: "glass-card p-6" },
+                            React.createElement('h3', { className: "text-xl font-bold mb-4" }, 
+                                `今月のカテゴリー別支出（${selectedMonth}）`
+                            ),
+                            React.createElement('div', { className: "space-y-3" },
+                                categories.map(cat => {
+                                    const amount = statistics.byCategory[cat.id] || 0;
+                                    const percentage = statistics.monthExpense > 0 
+                                        ? (amount / statistics.monthExpense * 100).toFixed(1)
+                                        : 0;
+                                    
+                                    return React.createElement('div', { key: cat.id },
+                                        React.createElement('div', { className: "flex justify-between items-center mb-1" },
+                                            React.createElement('span', { className: "flex items-center gap-2" },
+                                                React.createElement('span', null, cat.icon),
+                                                React.createElement('span', null, cat.label)
+                                            ),
+                                            React.createElement('span', { className: "font-medium" }, 
+                                                formatCurrency(amount)
+                                            )
+                                        ),
+                                        React.createElement('div', { className: "w-full bg-white/10 rounded-full h-2" },
+                                            React.createElement('div', {
+                                                className: "bg-gradient-to-r from-yellow-400 to-orange-500 h-2 rounded-full transition-all duration-500",
+                                                style: { width: `${percentage}%` }
+                                            })
+                                        )
+                                    );
+                                })
+                            )
+                        )
+                    ),
+
+                    // 取引履歴タブ
+                    activeTab === 'transactions' && React.createElement('div', { className: "glass-card p-6" },
+                        React.createElement('div', { className: "flex justify-between items-center mb-4" },
+                            React.createElement('h3', { className: "text-xl font-bold" }, '取引履歴'),
+                            React.createElement('input', {
+                                type: "month",
+                                value: selectedMonth,
+                                onChange: (e) => setSelectedMonth(e.target.value),
+                                className: "p-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-yellow-400"
+                            })
+                        ),
+                        React.createElement('div', { className: "space-y-2" },
+                            Object.values(transactions)
+                                .filter(t => t.date && t.date.startsWith(selectedMonth))
+                                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                .map(transaction => {
+                                    const category = categories.find(c => c.id === transaction.category);
+                                    return React.createElement('div', {
+                                        key: transaction.id,
+                                        className: `transaction-item ${transaction.type} cursor-pointer`,
+                                        onClick: () => setSelectedTransaction(transaction)
+                                    },
+                                        React.createElement('div', { className: "flex items-center justify-between" },
+                                            React.createElement('div', { className: "flex items-center gap-3" },
+                                                React.createElement('span', { className: "text-2xl" }, 
+                                                    transaction.type === 'income' ? '💰' : '💸'
+                                                ),
+                                                React.createElement('div', null,
+                                                    React.createElement('h4', { className: "font-medium" }, transaction.title),
+                                                    React.createElement('div', { className: "flex items-center gap-2 text-sm text-gray-400" },
+                                                        React.createElement('span', null, 
+                                                            new Date(transaction.date).toLocaleDateString('ja-JP')
+                                                        ),
+                                                        category && React.createElement('span', { className: `category-badge ${category.class}` },
+                                                            category.icon, ' ', category.label
+                                                        ),
+                                                        React.createElement('span', null, `by ${transaction.paidBy}`)
+                                                    )
+                                                )
+                                            ),
+                                            React.createElement('span', { 
+                                                className: `font-bold ${
+                                                    transaction.type === 'income' ? 'text-green-400' : 'text-red-400'
+                                                }` 
+                                            }, formatCurrency(transaction.amount))
+                                        )
+                                    );
+                                })
+                        ),
+                        Object.values(transactions).filter(t => t.date && t.date.startsWith(selectedMonth)).length === 0 &&
+                            React.createElement('p', { className: "text-center text-gray-400 py-8" }, 
+                                'この月の取引はありません'
+                            )
+                    ),
+
+                    // 精算タブ
+                    activeTab === 'settlement' && React.createElement('div', { className: "glass-card p-6" },
+                        React.createElement('h3', { className: "text-xl font-bold mb-6" }, '💸 メンバー間精算'),
+                        React.createElement('div', { className: "grid gap-4" },
+                            members.map(member => {
+                                const balance = statistics.memberBalances[member] || 0;
+                                return React.createElement('div', { 
+                                    key: member, 
+                                    className: "split-item" 
+                                },
+                                    React.createElement('div', null,
+                                        React.createElement('h4', { className: "font-bold text-lg" }, member),
+                                        React.createElement('p', { className: "text-sm text-gray-400" }, 
+                                            balance > 0 ? '受け取るべき金額' : balance < 0 ? '支払うべき金額' : '精算済み'
+                                        )
+                                    ),
+                                    React.createElement('span', { 
+                                        className: `text-2xl font-bold ${
+                                            balance > 0 ? 'balance-positive' :
+                                            balance < 0 ? 'balance-negative' :
+                                            'balance-zero'
+                                        }` 
+                                    }, formatCurrency(Math.abs(balance)))
+                                );
+                            })
+                        ),
+                        React.createElement('div', { className: "mt-6 p-4 bg-yellow-500/10 rounded-lg" },
+                            React.createElement('p', { className: "text-sm text-yellow-400" },
+                                '💡 精算のヒント: プラスの人からマイナスの人へ送金すると精算完了です'
+                            )
+                        )
+                    )
+                ),
+
+                // モーダル
+                showNewTransactionModal && React.createElement(NewTransactionModal, {
+                    onClose: () => setShowNewTransactionModal(false)
+                }),
+
+                selectedTransaction && React.createElement(TransactionDetailModal, {
+                    transaction: selectedTransaction,
+                    onClose: () => setSelectedTransaction(null)
+                })
+            );
+        };
+
+        ReactDOM.render(React.createElement(FinanceApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
