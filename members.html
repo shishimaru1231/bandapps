@@ -577,8 +577,39 @@
 
             // メンバー詳細モーダル
             const MemberDetailModal = ({ member, onClose }) => {
+                const [isEditing, setIsEditing] = useState(false);
+                const [editData, setEditData] = useState({
+                    name: member.name,
+                    role: member.role,
+                    contact: {
+                        phone: member.contact?.phone || '',
+                        email: member.contact?.email || '',
+                        line: member.contact?.line || ''
+                    },
+                    notes: member.notes || ''
+                });
+                
                 const memberEquipment = Object.values(equipment).filter(eq => eq.owner === member.id);
                 const borrowedEquipment = Object.values(equipment).filter(eq => eq.currentBorrower === member.id && eq.owner !== member.id);
+
+                const handleSave = () => {
+                    updateMember(member.id, editData);
+                    setIsEditing(false);
+                };
+
+                const handleCancel = () => {
+                    setEditData({
+                        name: member.name,
+                        role: member.role,
+                        contact: {
+                            phone: member.contact?.phone || '',
+                            email: member.contact?.email || '',
+                            line: member.contact?.line || ''
+                        },
+                        notes: member.notes || ''
+                    });
+                    setIsEditing(false);
+                };
 
                 return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
                     React.createElement('div', { 
@@ -591,37 +622,110 @@
                                     member.instruments?.[0] || getInitial(member.name)
                                 ),
                                 React.createElement('div', null,
-                                    React.createElement('h2', { className: "text-2xl font-bold mb-1" }, member.name),
+                                    isEditing ? 
+                                        React.createElement('input', {
+                                            type: "text",
+                                            value: editData.name,
+                                            onChange: (e) => setEditData({ ...editData, name: e.target.value }),
+                                            className: "text-2xl font-bold bg-white/10 border border-white/20 rounded-lg px-3 py-1 focus:outline-none focus:border-green-400"
+                                        }) :
+                                        React.createElement('h2', { className: "text-2xl font-bold mb-1" }, member.name),
                                     React.createElement('div', { className: "flex flex-wrap gap-2" },
-                                        React.createElement('span', { className: "role-badge" }, member.role),
+                                        isEditing ?
+                                            React.createElement('input', {
+                                                type: "text",
+                                                value: editData.role,
+                                                onChange: (e) => setEditData({ ...editData, role: e.target.value }),
+                                                className: "px-3 py-1 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-green-400"
+                                            }) :
+                                            React.createElement('span', { className: "role-badge" }, member.role),
                                         member.joinDate && React.createElement('span', { className: "text-sm text-gray-400" }, 
                                             `入団: ${new Date(member.joinDate).toLocaleDateString('ja-JP')}`
                                         )
                                     )
                                 )
                             ),
+                            React.createElement('div', { className: "flex gap-2" },
+                                !isEditing && React.createElement('button', {
+                                    onClick: () => setIsEditing(true),
+                                    className: "text-green-400 hover:text-green-300"
+                                }, '✏️ 編集'),
+                                React.createElement('button', {
+                                    onClick: onClose,
+                                    className: "text-gray-400 hover:text-white text-2xl"
+                                }, '×')
+                            )
+                        ),
+
+                        isEditing && React.createElement('div', { className: "flex gap-2 mb-4" },
                             React.createElement('button', {
-                                onClick: onClose,
-                                className: "text-gray-400 hover:text-white text-2xl"
-                            }, '×')
+                                onClick: handleSave,
+                                className: "btn-primary"
+                            }, '保存'),
+                            React.createElement('button', {
+                                onClick: handleCancel,
+                                className: "btn-secondary"
+                            }, 'キャンセル')
                         ),
 
                         React.createElement('div', { className: "grid md:grid-cols-2 gap-6" },
                             // 連絡先
                             React.createElement('div', { className: "glass-card p-4" },
                                 React.createElement('h3', { className: "font-bold mb-3" }, '📞 連絡先'),
-                                React.createElement('div', { className: "space-y-2" },
-                                    member.contact?.phone && React.createElement('div', { className: "contact-badge" },
-                                        React.createElement('span', null, '📱'),
-                                        React.createElement('span', null, member.contact.phone)
+                                React.createElement('div', { className: "space-y-3" },
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: "text-sm text-gray-400" }, '電話番号'),
+                                        isEditing ?
+                                            React.createElement('input', {
+                                                type: "tel",
+                                                value: editData.contact.phone,
+                                                onChange: (e) => setEditData({
+                                                    ...editData,
+                                                    contact: { ...editData.contact, phone: e.target.value }
+                                                }),
+                                                className: "w-full mt-1 p-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-green-400",
+                                                placeholder: "090-xxxx-xxxx"
+                                            }) :
+                                            member.contact?.phone && React.createElement('div', { className: "contact-badge mt-1" },
+                                                React.createElement('span', null, '📱'),
+                                                React.createElement('span', null, member.contact.phone)
+                                            )
                                     ),
-                                    member.contact?.email && React.createElement('div', { className: "contact-badge" },
-                                        React.createElement('span', null, '✉️'),
-                                        React.createElement('span', null, member.contact.email)
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: "text-sm text-gray-400" }, 'メールアドレス'),
+                                        isEditing ?
+                                            React.createElement('input', {
+                                                type: "email",
+                                                value: editData.contact.email,
+                                                onChange: (e) => setEditData({
+                                                    ...editData,
+                                                    contact: { ...editData.contact, email: e.target.value }
+                                                }),
+                                                className: "w-full mt-1 p-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-green-400",
+                                                placeholder: "example@band.com"
+                                            }) :
+                                            member.contact?.email && React.createElement('div', { className: "contact-badge mt-1" },
+                                                React.createElement('span', null, '✉️'),
+                                                React.createElement('span', null, member.contact.email)
+                                            )
                                     ),
-                                    member.contact?.line && React.createElement('div', { className: "contact-badge" },
-                                        React.createElement('span', null, '💬'),
-                                        React.createElement('span', null, `LINE: ${member.contact.line}`)
+                                    React.createElement('div', null,
+                                        React.createElement('label', { className: "text-sm text-gray-400" }, 'LINE ID'),
+                                        isEditing ?
+                                            React.createElement('input', {
+                                                type: "text",
+                                                value: editData.contact.line,
+                                                onChange: (e) => setEditData({
+                                                    ...editData,
+                                                    contact: { ...editData.contact, line: e.target.value }
+                                                }),
+                                                className: "w-full mt-1 p-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-green-400",
+                                                placeholder: "line_id"
+                                            }) :
+                                            member.contact?.line && React.createElement('div', { className: "contact-badge mt-1" },
+                                                React.createElement('span', null, '💬'),
+                                                React.createElement('span', null, `LINE: ${member.contact.line}`)
+                                            )
                                     )
                                 )
                             ),
@@ -629,9 +733,17 @@
                             // メモ
                             React.createElement('div', { className: "glass-card p-4" },
                                 React.createElement('h3', { className: "font-bold mb-3" }, '📝 メモ'),
-                                React.createElement('p', { className: "text-gray-300" }, 
-                                    member.notes || '特記事項なし'
-                                )
+                                isEditing ?
+                                    React.createElement('textarea', {
+                                        value: editData.notes,
+                                        onChange: (e) => setEditData({ ...editData, notes: e.target.value }),
+                                        className: "w-full p-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-green-400",
+                                        rows: 4,
+                                        placeholder: "特記事項、役割など"
+                                    }) :
+                                    React.createElement('p', { className: "text-gray-300" }, 
+                                        member.notes || '特記事項なし'
+                                    )
                             )
                         ),
 
