@@ -7,19 +7,20 @@
     
     <!-- ファビコン設定 -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎸</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎸</text></svg>">
     
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- React/Babel/Tailwind -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Firebase SDKs -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        
         body { 
             font-family: 'M PLUS Rounded 1c', sans-serif;
             background: #1a1a2e;
@@ -29,27 +30,9 @@
                 radial-gradient(circle at 40% 20%, rgba(255, 232, 119, 0.2) 0%, transparent 50%);
             color: #ffffff;
             min-height: 100vh;
+            margin: 0;
+            padding: 0;
         }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            33% { transform: translateY(-10px) rotate(-3deg); }
-            66% { transform: translateY(-10px) rotate(3deg); }
-        }
-        
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(120, 119, 198, 0.5); }
-            50% { box-shadow: 0 0 40px rgba(120, 119, 198, 0.8); }
-        }
-        
-        @keyframes slide-up {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .float-animation { animation: float 6s ease-in-out infinite; }
-        .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
-        .slide-up { animation: slide-up 0.6s ease-out; }
         
         .glass-card {
             background: rgba(255, 255, 255, 0.1);
@@ -97,6 +80,20 @@
             100% { opacity: 1; transform: scale(1); }
         }
         
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-10px) rotate(-3deg); }
+            66% { transform: translateY(-10px) rotate(3deg); }
+        }
+        
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        .slide-up { animation: slide-up 0.6s ease-out forwards; }
+        
         .quick-info-card {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 16px;
@@ -111,47 +108,19 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
         }
-        
-        .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-        
-        /* カスタムスクロールバー */
-        ::-webkit-scrollbar {
-            width: 12px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #667eea, #f093fb);
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, #5a67d8, #e878e3);
-        }
     </style>
 </head>
 <body>
-    <div id="root">読み込み中...</div>
+    <div id="root">
+        <div style="display: flex; justify-content: center; align-items: center; min-height: 100vh; color: white;">
+            読み込み中...
+        </div>
+    </div>
     
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, createElement: h } = React;
 
-        // Firebaseの設定（index.htmlと同じ設定を使用）
+        // Firebase設定（提供された実際の設定）
         const firebaseConfig = {
             apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
             authDomain: "band-apps.firebaseapp.com",
@@ -168,11 +137,10 @@
         let database = null;
 
         try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-                firebase.initializeApp(firebaseConfig);
-                database = firebase.database();
-                firebaseInitialized = true;
-            }
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            firebaseInitialized = true;
+            console.log("Firebase初期化成功");
         } catch (error) {
             console.error("Firebase初期化エラー:", error);
         }
@@ -382,152 +350,168 @@
                 });
             };
 
-            return React.createElement('div', { className: "min-h-screen" },
-                // ヘッダー
-                React.createElement('header', { className: "glass-card mx-4 mt-4 lg:mx-auto lg:max-w-7xl" },
-                    React.createElement('div', { className: "p-6" },
-                        React.createElement('div', { className: "flex flex-col lg:flex-row justify-between items-center gap-4" },
-                            React.createElement('div', { className: "text-center lg:text-left" },
-                                React.createElement('h1', { className: "text-4xl font-bold gradient-text mb-2" }, 
-                                    '🎸 バンド活動ハブ'
-                                ),
-                                React.createElement('p', { className: "text-gray-300" }, 
-                                    'すべての活動をここから'
-                                )
-                            ),
-                            React.createElement('div', { className: "text-center lg:text-right" },
-                                React.createElement('div', { className: "text-3xl font-bold text-white mb-1" }, 
-                                    formatTime(currentTime)
-                                ),
-                                React.createElement('div', { className: "text-sm text-gray-400" }, 
-                                    formatDate(currentTime)
-                                ),
-                                React.createElement('div', { className: "flex items-center justify-center lg:justify-end gap-2 mt-2" },
-                                    React.createElement('span', { className: "status-online" }),
-                                    React.createElement('span', { className: "text-sm text-gray-300" }, 
-                                        connectionStatus
-                                    ),
-                                    onlineUsers > 0 && React.createElement('span', { 
-                                        className: "text-sm text-gray-400" 
-                                    }, `(${onlineUsers}人)`)
-                                )
-                            )
-                        )
-                    )
-                ),
+            return (
+                <div className="min-h-screen">
+                    {/* ヘッダー */}
+                    <header className="glass-card mx-4 mt-4 lg:mx-auto lg:max-w-7xl">
+                        <div className="p-6">
+                            <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+                                <div className="text-center lg:text-left">
+                                    <h1 className="text-4xl font-bold gradient-text mb-2">
+                                        🎸 バンド活動ハブ
+                                    </h1>
+                                    <p className="text-gray-300">
+                                        すべての活動をここから
+                                    </p>
+                                </div>
+                                <div className="text-center lg:text-right">
+                                    <div className="text-3xl font-bold text-white mb-1">
+                                        {formatTime(currentTime)}
+                                    </div>
+                                    <div className="text-sm text-gray-400">
+                                        {formatDate(currentTime)}
+                                    </div>
+                                    <div className="flex items-center justify-center lg:justify-end gap-2 mt-2">
+                                        <span className="status-online"></span>
+                                        <span className="text-sm text-gray-300">
+                                            {connectionStatus}
+                                        </span>
+                                        {onlineUsers > 0 && (
+                                            <span className="text-sm text-gray-400">
+                                                ({onlineUsers}人)
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
 
-                // メインコンテンツ
-                React.createElement('main', { className: "container mx-auto px-4 py-8 max-w-7xl" },
-                    // クイック情報セクション
-                    React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" },
-                        // 最新の掲示板投稿
-                        React.createElement('div', { className: "quick-info-card slide-up" },
-                            React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
-                                React.createElement('span', null, '📝'),
-                                '掲示板'
-                            ),
-                            recentPost ? React.createElement('div', null,
-                                React.createElement('p', { className: "text-xl font-bold text-pink-400" }, 
-                                    recentPost.title
-                                ),
-                                React.createElement('p', { className: "text-gray-300 text-sm mt-1 line-clamp-2" }, 
-                                    recentPost.content
-                                ),
-                                React.createElement('p', { className: "text-sm text-gray-400 mt-2" }, 
-                                    `${recentPost.author} - ${recentPost.time}`
-                                )
-                            ) : React.createElement('p', { className: "text-gray-400" }, 
-                                '新しい投稿はありません'
-                            )
-                        ),
-                        
-                        // 次の予定
-                        React.createElement('div', { className: "quick-info-card slide-up", style: { animationDelay: '0.1s' } },
-                            React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
-                                React.createElement('span', null, '📍'),
-                                '次の予定'
-                            ),
-                            nextSchedule ? React.createElement('div', null,
-                                React.createElement('p', { className: "text-xl font-bold text-cyan-400" }, 
-                                    nextSchedule.title
-                                ),
-                                React.createElement('p', { className: "text-gray-300" }, 
-                                    nextSchedule.date
-                                ),
-                                React.createElement('p', { className: "text-sm text-gray-400" }, 
-                                    nextSchedule.location
-                                )
-                            ) : React.createElement('p', { className: "text-gray-400" }, 
-                                '予定はありません'
-                            )
-                        ),
+                    {/* メインコンテンツ */}
+                    <main className="container mx-auto px-4 py-8 max-w-7xl">
+                        {/* クイック情報セクション */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                            {/* 最新の掲示板投稿 */}
+                            <div className="quick-info-card slide-up">
+                                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                                    <span>📝</span>
+                                    掲示板
+                                </h3>
+                                {recentPost ? (
+                                    <div>
+                                        <p className="text-xl font-bold text-pink-400">
+                                            {recentPost.title}
+                                        </p>
+                                        <p className="text-gray-300 text-sm mt-1 line-clamp-2">
+                                            {recentPost.content}
+                                        </p>
+                                        <p className="text-sm text-gray-400 mt-2">
+                                            {recentPost.author} - {recentPost.time}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-400">
+                                        新しい投稿はありません
+                                    </p>
+                                )}
+                            </div>
+                            
+                            {/* 次の予定 */}
+                            <div className="quick-info-card slide-up" style={{ animationDelay: '0.1s' }}>
+                                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                                    <span>📍</span>
+                                    次の予定
+                                </h3>
+                                {nextSchedule ? (
+                                    <div>
+                                        <p className="text-xl font-bold text-cyan-400">
+                                            {nextSchedule.title}
+                                        </p>
+                                        <p className="text-gray-300">
+                                            {nextSchedule.date}
+                                        </p>
+                                        <p className="text-sm text-gray-400">
+                                            {nextSchedule.location}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-400">
+                                        予定はありません
+                                    </p>
+                                )}
+                            </div>
 
-                        // 最新の更新
-                        React.createElement('div', { className: "quick-info-card slide-up", style: { animationDelay: '0.2s' } },
-                            React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
-                                React.createElement('span', null, '🔔'),
-                                '最新の更新'
-                            ),
-                            recentUpdate ? React.createElement('div', null,
-                                React.createElement('p', { className: "text-sm text-pink-400 font-medium" }, 
-                                    recentUpdate.type
-                                ),
-                                React.createElement('p', { className: "text-gray-300" }, 
-                                    recentUpdate.content
-                                ),
-                                React.createElement('p', { className: "text-sm text-gray-500" }, 
-                                    recentUpdate.time
-                                )
-                            ) : React.createElement('p', { className: "text-gray-400" }, 
-                                '更新はありません'
-                            )
-                        )
-                    ),
+                            {/* 最新の更新 */}
+                            <div className="quick-info-card slide-up" style={{ animationDelay: '0.2s' }}>
+                                <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                                    <span>🔔</span>
+                                    最新の更新
+                                </h3>
+                                {recentUpdate ? (
+                                    <div>
+                                        <p className="text-sm text-pink-400 font-medium">
+                                            {recentUpdate.type}
+                                        </p>
+                                        <p className="text-gray-300">
+                                            {recentUpdate.content}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            {recentUpdate.time}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-400">
+                                        更新はありません
+                                    </p>
+                                )}
+                            </div>
+                        </div>
 
-                    // 機能グリッド
-                    React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" },
-                        features.map((feature, index) => 
-                            React.createElement('div', {
-                                key: feature.id,
-                                className: `feature-card p-6 slide-up`,
-                                style: { 
-                                    animationDelay: `${0.2 + index * 0.1}s`,
-                                    background: feature.bgColor
-                                },
-                                onClick: () => {
-                                    window.location.href = feature.url;
-                                }
-                            },
-                                React.createElement('div', { className: "text-5xl mb-4 float-animation" }, 
-                                    feature.icon
-                                ),
-                                React.createElement('h3', { 
-                                    className: `text-xl font-bold mb-2 bg-gradient-to-r ${feature.color} bg-clip-text text-transparent` 
-                                }, feature.title),
-                                React.createElement('p', { className: "text-gray-300 text-sm mb-4" }, 
-                                    feature.description
-                                ),
-                                React.createElement('span', { 
-                                    className: `inline-block px-3 py-1 bg-gradient-to-r ${feature.color} text-white text-xs rounded-full` 
-                                }, '利用可能')
-                            )
-                        )
-                    )
-                ),
+                        {/* 機能グリッド */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {features.map((feature, index) => (
+                                <div
+                                    key={feature.id}
+                                    className="feature-card p-6 slide-up"
+                                    style={{ 
+                                        animationDelay: `${0.2 + index * 0.1}s`,
+                                        background: feature.bgColor
+                                    }}
+                                    onClick={() => {
+                                        window.location.href = feature.url;
+                                    }}
+                                >
+                                    <div className="text-5xl mb-4 float-animation">
+                                        {feature.icon}
+                                    </div>
+                                    <h3 className={`text-xl font-bold mb-2 bg-gradient-to-r ${feature.color} bg-clip-text text-transparent`}>
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-gray-300 text-sm mb-4">
+                                        {feature.description}
+                                    </p>
+                                    <span className={`inline-block px-3 py-1 bg-gradient-to-r ${feature.color} text-white text-xs rounded-full`}>
+                                        利用可能
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
 
-                // フッター
-                React.createElement('footer', { className: "mt-12 pb-8 text-center text-gray-400 text-sm" },
-                    React.createElement('p', null, 
-                        '🎸 Band Apps © 2024 | ',
-                        React.createElement('span', { className: "text-gray-500" }, 
-                            'Made with ❤️ for Musicians'
-                        )
-                    )
-                )
+                    {/* フッター */}
+                    <footer className="mt-12 pb-8 text-center text-gray-400 text-sm">
+                        <p>
+                            🎸 Band Apps © 2024 | 
+                            <span className="text-gray-500"> Made with ❤️ for Musicians</span>
+                        </p>
+                    </footer>
+                </div>
             );
         };
 
-        ReactDOM.render(React.createElement(BandHub), document.getElementById('root'));
+        // アプリをレンダリング
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(BandHub));
     </script>
 </body>
 </html>
