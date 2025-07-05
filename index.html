@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>楽器パート評価アプリ</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        const MusicVotingApp = () => {
+            const [currentView, setCurrentView] = useState('home');
+            const [selectedSong, setSelectedSong] = useState(null);
+            const [votes, setVotes] = useState({});
+            const [hasVoted, setHasVoted] = useState({});
+            const [memos, setMemos] = useState({});
+            const [showMemoModal, setShowMemoModal] = useState(false);
+            const [currentMemoSong, setCurrentMemoSong] = useState(null);
+
+            // プレイリストの楽曲
+            const songs = [
+                { id: 1, title: "輪舞-Revolution-", artist: "奥井雅美", youtubeUrl: "https://youtu.be/Y_0VKKoj-A0" },
+                { id: 2, title: "only my Railgun", artist: "fripSide", youtubeUrl: "https://youtu.be/ZhIxg6_Femo" },
+                { id: 3, title: "創傷イノセンス", artist: "坂本真綾", youtubeUrl: "https://youtu.be/SFkLZ0yN3H8" },
+                { id: 4, title: "怪物", artist: "YOASOBI", youtubeUrl: "https://youtu.be/dy90tA3TT1c" },
+                { id: 5, title: "いけないボーダーライン", artist: "ワルキューレ", youtubeUrl: "https://youtu.be/VSQMQGv8RSg" },
+                { id: 6, title: "星間飛行", artist: "中島愛", youtubeUrl: "https://youtu.be/2CnvZOs8TWM" },
+                { id: 7, title: "射手座午後9時Dont be late", artist: "中島愛", youtubeUrl: "https://youtu.be/5sKSCRuKLHo" },
+                { id: 8, title: "RESISTER", artist: "ASCA", youtubeUrl: "https://youtu.be/RPZwWt6_unE" },
+                { id: 9, title: "unlasting", artist: "LiSA", youtubeUrl: "https://youtu.be/4vvvL8y9VHM" },
+                { id: 10, title: "Re:I am", artist: "Aimer", youtubeUrl: "https://youtu.be/ImQSdDX_1K0" },
+                { id: 11, title: "あの夢をなぞって", artist: "YOASOBI", youtubeUrl: "https://youtu.be/AZ8LK6n-is8" },
+                { id: 12, title: "サリシノハラ", artist: "みきとP feat.初音ミク", youtubeUrl: "https://youtu.be/Ejc5SXrQvQs" },
+                { id: 13, title: "Angel", artist: "Angel Beats!", youtubeUrl: "https://youtu.be/fxpiktN19ho" },
+                { id: 14, title: "ヴィラン", artist: "てにをは", youtubeUrl: "https://youtu.be/p9FJXfGHtDA" },
+                { id: 15, title: "勇者", artist: "YOASOBI", youtubeUrl: "https://youtu.be/fMRGsM1mPP4" },
+                { id: 16, title: "リアライズ", artist: "", youtubeUrl: "https://youtu.be/uaRnwnmqrws" },
+                { id: 17, title: "アイドル", artist: "YOASOBI", youtubeUrl: "https://youtu.be/9kluceRt9qg" },
+                { id: 18, title: "青春コンプレックス", artist: "結束バンド", youtubeUrl: "https://youtu.be/go_gPlSJpes" },
+                { id: 19, title: "POP TEAM EPIC", artist: "上坂すみれ", youtubeUrl: "https://youtu.be/fO9zdG6DzbY" },
+                { id: 20, title: "Magia", artist: "Kalafina", youtubeUrl: "https://youtu.be/ks8WPvlQpbg" },
+                { id: 21, title: "コネクト", artist: "ClariS", youtubeUrl: "https://youtu.be/7EuTPTVpuNI" },
+                { id: 22, title: "IGNITE", artist: "藍井エイル", youtubeUrl: "https://youtu.be/hoxUfOTE5II" },
+            ];
+
+            const instruments = [
+                { id: 'vocal', name: 'sola', icon: '🎤' },
+                { id: 'guitar', name: 'ししまる', icon: '🎸' },
+                { id: 'bass', name: 'まり', icon: '🎵' },
+                { id: 'keyboard', name: 'なかしゅん', icon: '🎹' },
+                { id: 'drums', name: 'あつしんぐ', icon: '🥁' }
+            ];
+
+            const ratings = [
+                { symbol: '◎', value: 4, color: 'bg-green-500', label: '得意分野' },
+                { symbol: '○', value: 3, color: 'bg-blue-500', label: '演奏しやすい' },
+                { symbol: '△', value: 2, color: 'bg-yellow-500', label: '頑張ればなんとか' },
+                { symbol: '✖️', value: 1, color: 'bg-red-500', label: '苦手' }
+            ];
+
+            // 初期データの読み込み
+            useEffect(() => {
+                const savedVotes = JSON.parse(localStorage.getItem('musicVotes') || '{}');
+                const savedHasVoted = JSON.parse(localStorage.getItem('hasVoted') || '{}');
+                const savedMemos = JSON.parse(localStorage.getItem('musicMemos') || '{}');
+                setVotes(savedVotes);
+                setHasVoted(savedHasVoted);
+                setMemos(savedMemos);
+            }, []);
+
+            // 投票処理
+            const handleVote = (songId, instrument, rating) => {
+                const voteKey = `${songId}-${instrument}`;
+                const newVotes = { ...votes };
+                
+                if (!newVotes[voteKey]) {
+                    newVotes[voteKey] = { total: 0, count: 0, ratings: { 1: 0, 2: 0, 3: 0, 4: 0 } };
+                }
+                
+                newVotes[voteKey].total += rating;
+                newVotes[voteKey].count += 1;
+                newVotes[voteKey].ratings[rating] += 1;
+                
+                setVotes(newVotes);
+                localStorage.setItem('musicVotes', JSON.stringify(newVotes));
+                
+                const newHasVoted = { ...hasVoted };
+                newHasVoted[voteKey] = true;
+                setHasVoted(newHasVoted);
+                localStorage.setItem('hasVoted', JSON.stringify(newHasVoted));
+            };
+
+            // メモ更新
+            const updateMemo = useCallback((songId, text) => {
+                const newMemos = { ...memos };
+                if (text === '') {
+                    delete newMemos[songId];
+                } else {
+                    newMemos[songId] = text;
+                }
+                setMemos(newMemos);
+                localStorage.setItem('musicMemos', JSON.stringify(newMemos));
+            }, [memos]);
+
+            // 曲全体のスコアを計算
+            const getSongTotalScore = (songId) => {
+                let totalScore = 0;
+                let totalCount = 0;
+                
+                instruments.forEach(instrument => {
+                    const voteKey = `${songId}-${instrument.id}`;
+                    const voteData = votes[voteKey];
+                    if (voteData && voteData.count > 0) {
+                        totalScore += voteData.total;
+                        totalCount += voteData.count;
+                    }
+                });
+                
+                return totalCount > 0 ? (totalScore / totalCount).toFixed(1) : 0;
+            };
+
+            // 曲の投票完了度を計算
+            const getSongCompletionRate = (songId) => {
+                let completedInstruments = 0;
+                
+                instruments.forEach(instrument => {
+                    const voteKey = `${songId}-${instrument.id}`;
+                    if (hasVoted[voteKey]) {
+                        completedInstruments++;
+                    }
+                });
+                
+                return Math.round((completedInstruments / instruments.length) * 100);
+            };
+
+            // アイコンコンポーネント
+            const Music = () => <div className="text-6xl">🎵</div>;
+            const Users = () => <div className=
