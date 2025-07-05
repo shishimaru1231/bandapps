@@ -242,11 +242,14 @@
             const [setlists, setSetlists] = useState({});
             const [activeSetlist, setActiveSetlist] = useState(null);
             const [showNewSetlistModal, setShowNewSetlistModal] = useState(false);
+            const [showEditSetlistModal, setShowEditSetlistModal] = useState(false);
+            const [editingSetlist, setEditingSetlist] = useState(null);
             const [draggedSong, setDraggedSong] = useState(null);
             const [dragOverIndex, setDragOverIndex] = useState(null);
             const [connectionStatus, setConnectionStatus] = useState('確認中...');
             const [votes, setVotes] = useState({}); // 楽曲評価データ
             const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+            const [mobileTab, setMobileTab] = useState('songs'); // モバイル用タブ状態
 
             // 楽曲リスト（index.htmlと同じ）
             const allSongs = [
@@ -386,6 +389,25 @@
             };
 
             // セットリストを更新
+            const updateSetlistInfo = (setlistId, info) => {
+                if (firebaseInitialized && database) {
+                    database.ref(`setlists/${setlistId}`).update({
+                        ...info,
+                        updatedAt: Date.now()
+                    });
+                } else {
+                    setSetlists(prev => ({
+                        ...prev,
+                        [setlistId]: {
+                            ...prev[setlistId],
+                            ...info,
+                            updatedAt: Date.now()
+                        }
+                    }));
+                }
+            };
+
+            // セットリストの曲を更新
             const updateSetlist = (setlistId, songs) => {
                 if (firebaseInitialized && database) {
                     database.ref(`setlists/${setlistId}/songs`).set(songs);
@@ -422,11 +444,13 @@
             const handleDragStart = (e, song) => {
                 setDraggedSong(song);
                 e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', JSON.stringify(song));
             };
 
             const handleDragOver = (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
+                return false;
             };
             
             const handleDragEnter = (e, index) => {
@@ -440,46 +464,83 @@
 
             const handleDrop = (e, dropIndex) => {
                 e.preventDefault();
+                e.stopPropagation();
                 setDragOverIndex(null);
 
-                if (!activeSetlist || !draggedSong) return;
+                if (!activeSetlist) return;
+
+                let songData = draggedSong;
+                if (!songData) {
+                    // データ転送から取得を試みる
+                    try {
+                        const data = e.dataTransfer.getData('text/plain');
+                        if (data) {
+                            songData = JSON.parse(data);
+                        }
+                    } catch (error) {
+                        console.error('ドロップデータの解析に失敗:', error);
+                        return;
+                    }
+                }
+
+                if (!songData) return;
 
                 const currentSetlist = setlists[activeSetlist];
                 const newSongs = [...(currentSetlist.songs || [])];
 
                 // 既存の曲の並び替え
-                const draggedIndex = newSongs.indexOf(draggedSong.id);
+                const draggedIndex = newSongs.indexOf(songData.id);
                 if (draggedIndex !== -1) {
                     newSongs.splice(draggedIndex, 1);
-                    newSongs.splice(dropIndex, 0, draggedSong.id);
+                    newSongs.splice(dropIndex, 0, songData.id);
                 } else {
                     // 新しい曲の追加
-                    newSongs.splice(dropIndex, 0, draggedSong.id);
+                    newSongs.splice(dropIndex, 0, songData.id);
                 }
 
                 updateSetlist(activeSetlist, newSongs);
                 setDraggedSong(null);
+                return false;
             };
 
             const handleDropToSetlist = (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 setDragOverIndex(null);
 
-                if (!activeSetlist || !draggedSong) return;
+                if (!activeSetlist) return;
+
+                let songData = draggedSong;
+                if (!songData) {
+                    // データ転送から取得を試みる
+                    try {
+                        const data = e.dataTransfer.getData('text/plain');
+                        if (data) {
+                            songData = JSON.parse(data);
+                        }
+                    } catch (error) {
+                        console.error('ドロップデータの解析に失敗:', error);
+                        return;
+                    }
+                }
+
+                if (!songData) return;
 
                 const currentSetlist = setlists[activeSetlist];
                 const newSongs = [...(currentSetlist.songs || [])];
 
                 // 既存の曲でなければ追加
-                if (!newSongs.includes(draggedSong.id)) {
-                    newSongs.push(draggedSong.id);
+                if (!newSongs.includes(songData.id)) {
+                    newSongs.push(songData.id);
                     updateSetlist(activeSetlist, newSongs);
                 }
 
                 setDraggedSong(null);
+                return false;
             };
             
             const handleDragEnd = (e) => {
+                e.preventDefault();
                 setDraggedSong(null);
                 setDragOverIndex(null);
             };
@@ -582,6 +643,77 @@
                 );
             };
 
+            // セットリスト編集モーダル
+            const EditSetlistModal = ({ setlist, onClose }) => {
+                const [formData, setFormData] = useState({
+                    name: setlist.name,
+                    eventDate: setlist.eventDate || '',
+                    venue: setlist.venue || ''
+                });
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (!formData.name) {
+                        alert('セットリスト名は必須です');
+                        return;
+                    }
+                    updateSetlistInfo(setlist.id, formData);
+                    setShowEditSetlistModal(false);
+                    setEditingSetlist(null);
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-md w-full mx-4",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: "text-2xl font-bold mb-4" }, 'セットリストを編集'),
+                        React.createElement('form', { onSubmit: handleSubmit },
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'セットリスト名'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.name,
+                                    onChange: (e) => setFormData({ ...formData, name: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-purple-400",
+                                    required: true
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'イベント日'),
+                                React.createElement('input', {
+                                    type: "date",
+                                    value: formData.eventDate,
+                                    onChange: (e) => setFormData({ ...formData, eventDate: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-purple-400"
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '会場'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.venue,
+                                    onChange: (e) => setFormData({ ...formData, venue: e.target.value }),
+                                    className: "w-full p-3 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-purple-400",
+                                    placeholder: "ライブハウス〇〇"
+                                })
+                            ),
+                            React.createElement('div', { className: "flex gap-3" },
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary flex-1"
+                                }, '保存'),
+                                React.createElement('button', {
+                                    type: "button",
+                                    onClick: onClose,
+                                    className: "btn-secondary flex-1"
+                                }, 'キャンセル')
+                            )
+                        )
+                    )
+                );
+            };
+
             const currentSetlist = activeSetlist ? setlists[activeSetlist] : null;
 
             return React.createElement('div', { className: "min-h-screen p-4" },
@@ -630,14 +762,27 @@
                                                     onClick: () => setActiveSetlist(id)
                                                 },
                                                     React.createElement('div', { className: "flex justify-between items-start mb-2" },
-                                                        React.createElement('h3', { className: "font-bold" }, setlist.name),
-                                                        React.createElement('button', {
-                                                            onClick: (e) => {
-                                                                e.stopPropagation();
-                                                                deleteSetlist(id);
-                                                            },
-                                                            className: "text-gray-400 hover:text-red-400 transition-colors"
-                                                        }, '×')
+                                                        React.createElement('h3', { 
+                                                            className: "font-bold cursor-pointer hover:text-purple-400", 
+                                                            onClick: () => setActiveSetlist(id)
+                                                        }, setlist.name),
+                                                        React.createElement('div', { className: "flex gap-2" },
+                                                            React.createElement('button', {
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingSetlist(setlist);
+                                                                    setShowEditSetlistModal(true);
+                                                                },
+                                                                className: "text-purple-400 hover:text-purple-300 transition-colors"
+                                                            }, '✏️'),
+                                                            React.createElement('button', {
+                                                                onClick: (e) => {
+                                                                    e.stopPropagation();
+                                                                    deleteSetlist(id);
+                                                                },
+                                                                className: "text-gray-400 hover:text-red-400 transition-colors"
+                                                            }, '×')
+                                                        )
                                                     ),
                                                     setlist.eventDate && React.createElement('p', { className: "text-sm text-gray-400" }, 
                                                         new Date(setlist.eventDate).toLocaleDateString('ja-JP')
@@ -661,7 +806,8 @@
 
                         // セットリスト編集エリア
                         React.createElement('div', { className: "lg:col-span-2" },
-                            React.createElement('div', { className: "grid lg:grid-cols-2 gap-6" },
+                            // デスクトップ表示
+                            React.createElement('div', { className: "desktop-view grid lg:grid-cols-2 gap-6" },
                                 // 楽曲プール
                                 React.createElement('div', null,
                                     React.createElement('h2', { className: "text-xl font-bold mb-4" }, '楽曲プール'),
@@ -775,6 +921,146 @@
                                         )
                                     )
                                 )
+                            ),
+
+                            // モバイル表示
+                            React.createElement('div', { className: "mobile-view" },
+                                currentSetlist && React.createElement('div', { className: "mobile-tab-buttons" },
+                                    React.createElement('button', {
+                                        onClick: () => setMobileTab('songs'),
+                                        className: `mobile-tab-button ${mobileTab === 'songs' ? 'active' : ''}`
+                                    }, '楽曲プール'),
+                                    React.createElement('button', {
+                                        onClick: () => setMobileTab('setlist'),
+                                        className: `mobile-tab-button ${mobileTab === 'setlist' ? 'active' : ''}`
+                                    }, 'セットリスト')
+                                ),
+                                
+                                // モバイル：楽曲プール
+                                mobileTab === 'songs' && React.createElement('div', null,
+                                    React.createElement('h2', { className: "text-lg font-bold mb-3" }, '楽曲プール'),
+                                    React.createElement('div', { className: "song-pool" },
+                                        allSongs.map(song => {
+                                            const score = getSongScore(song.id);
+                                            const isInSetlist = currentSetlist && currentSetlist.songs.includes(song.id);
+                                            
+                                            return React.createElement('div', {
+                                                key: song.id,
+                                                className: `song-card ${isInSetlist ? 'opacity-50' : ''}`,
+                                                onClick: () => {
+                                                    if (!isInSetlist && currentSetlist) {
+                                                        const newSongs = [...(currentSetlist.songs || []), song.id];
+                                                        updateSetlist(activeSetlist, newSongs);
+                                                    }
+                                                }
+                                            },
+                                                React.createElement('div', { className: "flex justify-between items-start" },
+                                                    React.createElement('div', { className: "flex-1" },
+                                                        React.createElement('h4', { className: "font-bold" }, song.title),
+                                                        React.createElement('p', { className: "text-xs text-gray-400" }, song.artist)
+                                                    ),
+                                                    React.createElement('div', { className: "text-right" },
+                                                        React.createElement('span', { className: "text-xs text-gray-500" }, 
+                                                            formatDuration(song.duration)
+                                                        ),
+                                                        score > 0 && React.createElement('div', { className: "mt-1" },
+                                                            React.createElement(StarRating, { score })
+                                                        )
+                                                    )
+                                                ),
+                                                !isInSetlist && React.createElement('div', { 
+                                                    className: "text-center mt-2 text-xs text-purple-400" 
+                                                }, 'タップして追加 →')
+                                            );
+                                        })
+                                    )
+                                ),
+
+                                // モバイル：セットリスト
+                                mobileTab === 'setlist' && React.createElement('div', null,
+                                    React.createElement('h2', { className: "text-lg font-bold mb-3" }, 
+                                        currentSetlist ? currentSetlist.name : 'セットリストを選択'
+                                    ),
+                                    currentSetlist ? (
+                                        currentSetlist.songs && currentSetlist.songs.length > 0 ? (
+                                            React.createElement('div', null,
+                                                currentSetlist.songs.map((songId, index) => {
+                                                    const song = allSongs.find(s => s.id === songId);
+                                                    if (!song) return null;
+                                                    
+                                                    const score = getSongScore(song.id);
+                                                    
+                                                    return React.createElement('div', {
+                                                        key: `${songId}-${index}`,
+                                                        className: "song-card mb-3"
+                                                    },
+                                                        React.createElement('div', { className: "flex items-center gap-3" },
+                                                            React.createElement('span', { className: "text-xl font-bold text-purple-400" }, 
+                                                                index + 1
+                                                            ),
+                                                            React.createElement('div', { className: "flex-1" },
+                                                                React.createElement('h4', { className: "font-bold" }, song.title),
+                                                                React.createElement('p', { className: "text-xs text-gray-400" }, song.artist)
+                                                            ),
+                                                            React.createElement('div', { className: "flex flex-col gap-2" },
+                                                                React.createElement('div', { className: "flex gap-2" },
+                                                                    index > 0 && React.createElement('button', {
+                                                                        onClick: () => {
+                                                                            const newSongs = [...currentSetlist.songs];
+                                                                            [newSongs[index - 1], newSongs[index]] = [newSongs[index], newSongs[index - 1]];
+                                                                            updateSetlist(activeSetlist, newSongs);
+                                                                        },
+                                                                        className: "text-purple-400 text-lg"
+                                                                    }, '↑'),
+                                                                    index < currentSetlist.songs.length - 1 && React.createElement('button', {
+                                                                        onClick: () => {
+                                                                            const newSongs = [...currentSetlist.songs];
+                                                                            [newSongs[index], newSongs[index + 1]] = [newSongs[index + 1], newSongs[index]];
+                                                                            updateSetlist(activeSetlist, newSongs);
+                                                                        },
+                                                                        className: "text-purple-400 text-lg"
+                                                                    }, '↓'),
+                                                                    React.createElement('button', {
+                                                                        onClick: () => removeSongFromSetlist(songId),
+                                                                        className: "text-red-400 text-lg"
+                                                                    }, '×')
+                                                                )
+                                                            )
+                                                        ),
+                                                        React.createElement('div', { className: "flex justify-between items-center mt-2" },
+                                                            React.createElement('span', { className: "text-xs text-gray-500" }, 
+                                                                formatDuration(song.duration)
+                                                            ),
+                                                            score > 0 && React.createElement(StarRating, { score })
+                                                        )
+                                                    );
+                                                }),
+                                                React.createElement('div', { className: "mt-4 pt-4 border-t border-white/10" },
+                                                    React.createElement('div', { className: "flex justify-between items-center" },
+                                                        React.createElement('span', { className: "font-bold" }, '合計'),
+                                                        React.createElement('span', { className: "time-badge text-lg" }, 
+                                                            formatDuration(calculateTotalDuration(currentSetlist.songs))
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        ) : (
+                                            React.createElement('div', { className: "text-center py-8" },
+                                                React.createElement('p', { className: "text-gray-400 mb-4" }, 
+                                                    'セットリストが空です'
+                                                ),
+                                                React.createElement('button', {
+                                                    onClick: () => setMobileTab('songs'),
+                                                    className: "btn-secondary"
+                                                }, '楽曲を追加する')
+                                            )
+                                        )
+                                    ) : (
+                                        React.createElement('p', { className: "text-gray-400 text-center py-16" }, 
+                                            '左側からセットリストを選択してください'
+                                        )
+                                    )
+                                )
                             )
                         )
                     )
@@ -783,6 +1069,14 @@
                 // モーダル
                 showNewSetlistModal && React.createElement(NewSetlistModal, {
                     onClose: () => setShowNewSetlistModal(false)
+                }),
+
+                showEditSetlistModal && editingSetlist && React.createElement(EditSetlistModal, {
+                    setlist: editingSetlist,
+                    onClose: () => {
+                        setShowEditSetlistModal(false);
+                        setEditingSetlist(null);
+                    }
                 })
             );
         };
