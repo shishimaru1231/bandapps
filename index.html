@@ -149,30 +149,30 @@
             const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
             const [firebaseError, setFirebaseError] = useState(!firebaseInitialized);
 
-            // プレイリストの楽曲（前と同じ）
+            // プレイリストの楽曲（主題歌情報を追加）
             const songs = [
-                { id: 1, title: "輪舞-Revolution-", artist: "奥井雅美", youtubeUrl: "https://youtu.be/Y_0VKKoj-A0" },
-                { id: 2, title: "only my Railgun", artist: "fripSide", youtubeUrl: "https://youtu.be/ZhIxg6_Femo" },
-                { id: 3, title: "創傷イノセンス", artist: "坂本真綾", youtubeUrl: "https://youtu.be/SFkLZ0yN3H3" },
-                { id: 4, title: "怪物", artist: "YOASOBI", youtubeUrl: "https://youtu.be/dy90tA3TT1c" },
-                { id: 5, title: "いけないボーダーライン", artist: "ワルキューレ", youtubeUrl: "https://youtu.be/VSQMQGv8RSg" },
-                { id: 6, title: "星間飛行", artist: "中島愛", youtubeUrl: "https://youtu.be/2CnvZOs8TWM" },
-                { id: 7, title: "射手座午後9時Dont be late", artist: "中島愛", youtubeUrl: "https://youtu.be/5sKSCRuKLHo" },
-                { id: 8, title: "RESISTER", artist: "ASCA", youtubeUrl: "https://youtu.be/RPZwWt6_unE" },
-                { id: 9, title: "unlasting", artist: "LiSA", youtubeUrl: "https://youtu.be/4vvvL8y9VHM" },
-                { id: 10, title: "Re:I am", artist: "Aimer", youtubeUrl: "https://youtu.be/ImQSdDX_1K0" },
-                { id: 11, title: "あの夢をなぞって", artist: "YOASOBI", youtubeUrl: "https://youtu.be/AZ8LK6n-is8" },
-                { id: 12, title: "サリシノハラ", artist: "みきとP feat.初音ミク", youtubeUrl: "https://youtu.be/Ejc5SXrQvQs" },
-                { id: 13, title: "Angel", artist: "Angel Beats!", youtubeUrl: "https://youtu.be/fxpiktN19ho" },
-                { id: 14, title: "ヴィラン", artist: "てにをは", youtubeUrl: "https://youtu.be/p9FJXfGHtDA" },
-                { id: 15, title: "勇者", artist: "YOASOBI", youtubeUrl: "https://youtu.be/fMRGsM1mPP4" },
-                { id: 16, title: "リアライズ", artist: "", youtubeUrl: "https://youtu.be/uaRnwnmqrws" },
-                { id: 17, title: "アイドル", artist: "YOASOBI", youtubeUrl: "https://youtu.be/9kluceRt9qg" },
-                { id: 18, title: "青春コンプレックス", artist: "結束バンド", youtubeUrl: "https://youtu.be/go_gPlSJpes" },
-                { id: 19, title: "POP TEAM EPIC", artist: "上坂すみれ", youtubeUrl: "https://youtu.be/fO9zdG6DzbY" },
-                { id: 20, title: "Magia", artist: "Kalafina", youtubeUrl: "https://youtu.be/ks8WPvlQpbg" },
-                { id: 21, title: "コネクト", artist: "ClariS", youtubeUrl: "https://youtu.be/7EuTPTVpuNI" },
-                { id: 22, title: "IGNITE", artist: "藍井エイル", youtubeUrl: "https://youtu.be/hoxUfOTE5II" },
+                { id: 1, title: "輪舞-Revolution-", artist: "奥井雅美", youtubeUrl: "https://youtu.be/Y_0VKKoj-A0", anime: "少女革命ウテナ OP" },
+                { id: 2, title: "only my Railgun", artist: "fripSide", youtubeUrl: "https://youtu.be/ZhIxg6_Femo", anime: "とある科学の超電磁砲 OP" },
+                { id: 3, title: "創傷イノセンス", artist: "坂本真綾", youtubeUrl: "https://youtu.be/SFkLZ0yN3H3", anime: "亜人 OP" },
+                { id: 4, title: "怪物", artist: "YOASOBI", youtubeUrl: "https://youtu.be/dy90tA3TT1c", anime: "BEASTARS 第2期 OP" },
+                { id: 5, title: "いけないボーダーライン", artist: "ワルキューレ", youtubeUrl: "https://youtu.be/VSQMQGv8RSg", anime: "マクロスΔ" },
+                { id: 6, title: "星間飛行", artist: "中島愛", youtubeUrl: "https://youtu.be/2CnvZOs8TWM", anime: "マクロスフロンティア 挿入歌" },
+                { id: 7, title: "射手座午後9時Dont be late", artist: "中島愛", youtubeUrl: "https://youtu.be/5sKSCRuKLHo", anime: "マクロスフロンティア 挿入歌" },
+                { id: 8, title: "RESISTER", artist: "ASCA", youtubeUrl: "https://youtu.be/RPZwWt6_unE", anime: "ソードアート・オンライン アリシゼーション OP" },
+                { id: 9, title: "unlasting", artist: "LiSA", youtubeUrl: "https://youtu.be/4vvvL8y9VHM", anime: "ソードアート・オンライン アリシゼーション War of Underworld ED" },
+                { id: 10, title: "Re:I am", artist: "Aimer", youtubeUrl: "https://youtu.be/ImQSdDX_1K0", anime: "機動戦士ガンダムUC" },
+                { id: 11, title: "あの夢をなぞって", artist: "YOASOBI", youtubeUrl: "https://youtu.be/AZ8LK6n-is8", anime: "夜のクラゲは泳げない OP" },
+                { id: 12, title: "サリシノハラ", artist: "みきとP feat.初音ミク", youtubeUrl: "https://youtu.be/Ejc5SXrQvQs", anime: null },
+                { id: 13, title: "Angel", artist: "Angel Beats!", youtubeUrl: "https://youtu.be/fxpiktN19ho", anime: "Angel Beats! 挿入歌" },
+                { id: 14, title: "ヴィラン", artist: "てにをは", youtubeUrl: "https://youtu.be/p9FJXfGHtDA", anime: null },
+                { id: 15, title: "勇者", artist: "YOASOBI", youtubeUrl: "https://youtu.be/fMRGsM1mPP4", anime: "葬送のフリーレン OP" },
+                { id: 16, title: "リアライズ", artist: "", youtubeUrl: "https://youtu.be/uaRnwnmqrws", anime: "Re:ゼロから始める異世界生活 OP" },
+                { id: 17, title: "アイドル", artist: "YOASOBI", youtubeUrl: "https://youtu.be/9kluceRt9qg", anime: "推しの子 OP" },
+                { id: 18, title: "青春コンプレックス", artist: "結束バンド", youtubeUrl: "https://youtu.be/go_gPlSJpes", anime: "ぼっち・ざ・ろっく！" },
+                { id: 19, title: "POP TEAM EPIC", artist: "上坂すみれ", youtubeUrl: "https://youtu.be/fO9zdG6DzbY", anime: "ポプテピピック OP" },
+                { id: 20, title: "Magia", artist: "Kalafina", youtubeUrl: "https://youtu.be/ks8WPvlQpbg", anime: "魔法少女まどか☆マギカ ED" },
+                { id: 21, title: "コネクト", artist: "ClariS", youtubeUrl: "https://youtu.be/7EuTPTVpuNI", anime: "魔法少女まどか☆マギカ OP" },
+                { id: 22, title: "IGNITE", artist: "藍井エイル", youtubeUrl: "https://youtu.be/hoxUfOTE5II", anime: "ソードアート・オンライン II OP" },
             ];
 
             const instruments = [
@@ -435,7 +435,7 @@
             });
 
             // Firebase設定画面
-                            if (firebaseError) {
+            if (firebaseError) {
                 return React.createElement('div', { className: "min-h-screen pop-gradient flex items-center justify-center p-4" },
                     React.createElement('div', { className: "pop-card pop-shadow-lg p-8 max-w-2xl w-full" },
                         React.createElement('div', { className: "text-center mb-6" },
@@ -484,7 +484,7 @@
                                 'Band Apps'
                             ),
                             React.createElement('p', { className: "text-xl text-white opacity-90 mb-6" }, 
-                                '曲決定に向けた情報整理'
+                                '曲決定に向けて情報整理'
                             ),
                             
                             React.createElement('div', { className: "mt-8 p-6 pop-card pop-shadow-lg max-w-md mx-auto fade-in" },
@@ -539,7 +539,7 @@
                 );
             }
 
-            // 投票画面（前と同じコンポーネント構造だが、リアルタイム更新対応）
+            // 投票画面
             if (currentView === 'vote') {
                 return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-pink-50 to-purple-50" },
                     React.createElement('div', { className: "bg-white shadow-lg sticky top-0 z-10" },
@@ -572,7 +572,7 @@
                                 },
                                     React.createElement('div', { className: "flex items-center justify-between mb-6" },
                                         React.createElement('div', { className: "flex-1" },
-                                            React.createElement('div', { className: "flex items-center gap-3 mb-3" },
+                                            React.createElement('div', { className: "flex items-center gap-3 mb-2" },
                                                 React.createElement('h3', { className: "text-xl font-bold text-gray-800" }, song.title),
                                                 React.createElement('a', {
                                                     href: song.youtubeUrl,
@@ -584,6 +584,10 @@
                                                         window.open(song.youtubeUrl, '_blank');
                                                     }
                                                 }, '🎥')
+                                            ),
+                                            song.anime && React.createElement('p', { className: "text-sm text-indigo-600 mb-1" }, 
+                                                React.createElement('span', { className: "mr-1" }, '📺'),
+                                                song.anime
                                             ),
                                             React.createElement('p', { className: "text-gray-600 mb-3" }, song.artist),
                                             React.createElement('div', { className: "flex items-center gap-6" },
@@ -668,7 +672,7 @@
                 );
             }
 
-            // 結果画面（前と同じ）
+            // 結果画面
             return React.createElement('div', { className: "min-h-screen bg-gradient-to-br from-blue-50 to-green-50" },
                 React.createElement('div', { className: "bg-white shadow-lg" },
                     React.createElement('div', { className: "container mx-auto px-4 py-5" },
@@ -701,7 +705,7 @@
                                 React.createElement('div', { className: "mb-8" },
                                     React.createElement('div', { className: "flex items-center justify-between mb-4" },
                                         React.createElement('div', { className: "flex-1" },
-                                            React.createElement('div', { className: "flex items-center gap-3 mb-3" },
+                                            React.createElement('div', { className: "flex items-center gap-3 mb-2" },
                                                 React.createElement('h3', { className: "text-2xl font-bold text-gray-800" }, song.title),
                                                 React.createElement('a', {
                                                     href: song.youtubeUrl,
@@ -713,6 +717,10 @@
                                                         window.open(song.youtubeUrl, '_blank');
                                                     }
                                                 }, '🎥')
+                                            ),
+                                            song.anime && React.createElement('p', { className: "text-sm text-indigo-600 mb-2" }, 
+                                                React.createElement('span', { className: "mr-1" }, '📺'),
+                                                song.anime
                                             ),
                                             React.createElement('p', { className: "text-gray-600 text-lg" }, song.artist)
                                         ),
