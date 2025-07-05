@@ -14,69 +14,107 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@300;400;500&display=swap');
         body { 
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            background: #fef3f9;
+            font-family: 'Kiwi Maru', serif;
+            background: #e8f4f8;
+            background-image: 
+                radial-gradient(circle at 20% 80%, #ffd4e5 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, #d4e4f7 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, #fffacd 0%, transparent 50%);
         }
         
-        @keyframes bounce-soft {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-10px) scale(1.05); }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(-5deg); }
+            33% { transform: translateY(-15px) rotate(0deg); }
+            66% { transform: translateY(-5px) rotate(5deg); }
         }
         
-        @keyframes wiggle {
-            0%, 100% { transform: rotate(-3deg); }
-            50% { transform: rotate(3deg); }
+        @keyframes wobble {
+            0%, 100% { transform: rotate(-10deg) scale(1); }
+            25% { transform: rotate(10deg) scale(1.1); }
+            50% { transform: rotate(-10deg) scale(1); }
+            75% { transform: rotate(10deg) scale(1.1); }
         }
         
-        @keyframes heartbeat {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+        @keyframes blink {
+            0%, 90%, 100% { transform: scaleY(1); }
+            95% { transform: scaleY(0.1); }
         }
         
-        @keyframes sparkle {
-            0%, 100% { opacity: 0; transform: scale(0); }
-            50% { opacity: 1; transform: scale(1); }
+        @keyframes pop {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        @keyframes sway {
+            0%, 100% { transform: translateX(0) rotate(0deg); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            75% { transform: translateX(10px) rotate(5deg); }
         }
         
-        .bounce-soft { animation: bounce-soft 2s ease-in-out infinite; }
-        .wiggle { animation: wiggle 0.5s ease-in-out infinite; }
-        .heartbeat { animation: heartbeat 1.5s ease-in-out infinite; }
-        .sparkle { animation: sparkle 1.5s ease-in-out infinite; }
-        .pulse { animation: pulse 2s ease-in-out infinite; }
+        .float { animation: float 3s ease-in-out infinite; }
+        .wobble { animation: wobble 2s ease-in-out infinite; }
+        .blink { animation: blink 3s ease-in-out infinite; }
+        .pop { animation: pop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        .sway { animation: sway 4s ease-in-out infinite; }
         
-        .pastel-gradient {
-            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 25%, #ff7675 50%, #fd79a8 75%, #e17055 100%);
+        .yuru-gradient {
+            background: linear-gradient(180deg, #a8e6cf 0%, #dcedc1 25%, #ffd3b6 50%, #ffaaa5 75%, #ff8b94 100%);
         }
         
-        .kawaii-shadow {
-            box-shadow: 0 4px 15px rgba(255, 182, 193, 0.3), 
-                        0 2px 4px rgba(255, 182, 193, 0.2);
+        .yuru-shadow {
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1), 
+                        0 4px 8px rgba(0, 0, 0, 0.05),
+                        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+        }
+        
+        .yuru-card {
+            background: white;
+            border: 4px solid #333;
+            border-radius: 30px;
+            position: relative;
+        }
+        
+        .yuru-card::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            background: #333;
+            border-radius: 34px;
+            z-index: -1;
         }
         
         /* カスタムスクロールバー */
         ::-webkit-scrollbar {
-            width: 12px;
+            width: 16px;
         }
         
         ::-webkit-scrollbar-track {
-            background: #fff0f5;
-            border-radius: 10px;
+            background: #f0f9ff;
+            border-radius: 20px;
+            border: 2px solid #333;
         }
         
         ::-webkit-scrollbar-thumb {
-            background: linear-gradient(45deg, #ffb6c1, #ffc0cb);
-            border-radius: 10px;
+            background: #a8e6cf;
+            border-radius: 20px;
+            border: 2px solid #333;
         }
         
         ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(45deg, #ff91a4, #ffb6c1);
+            background: #7dd3b0;
+        }
+        
+        /* ゆるキャラっぽい丸みを帯びたスタイル */
+        .yuru-text {
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
@@ -89,14 +127,13 @@
         // Firebaseの設定
         const firebaseConfig = {
             // ここにあなたのFirebase設定を入力してください
-  　　　　　apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
-  　　　　　authDomain: "band-apps.firebaseapp.com",
-  　　　　　databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
-  　　　　　projectId: "band-apps",
-  　　　　　storageBucket: "band-apps.firebasestorage.app",
-  　　　　　messagingSenderId: "238355659055",
-  　　　　　appId: "1:238355659055:web:d07caffb8b2fd6112689da",
-  　　　　　measurementId: "G-T5ZYHTSS3L"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         // Firebase初期化の確認
@@ -151,18 +188,18 @@
             ];
 
             const instruments = [
-                { id: 'vocal', name: 'sola', icon: '🎤', color: 'from-pink-400 to-pink-600' },
-                { id: 'guitar', name: 'ししまる', icon: '🎸', color: 'from-purple-400 to-purple-600' },
-                { id: 'bass', name: 'まり', icon: '🎵', color: 'from-blue-400 to-blue-600' },
-                { id: 'keyboard', name: 'なかしゅん', icon: '🎹', color: 'from-green-400 to-green-600' },
-                { id: 'drums', name: 'あつしんぐ', icon: '🥁', color: 'from-orange-400 to-orange-600' }
+                { id: 'vocal', name: 'そらぽん', icon: '🎤', color: 'from-pink-300 to-pink-400', emoji: '(◕ᴗ◕✿)' },
+                { id: 'guitar', name: 'ししまるん', icon: '🎸', color: 'from-purple-300 to-purple-400', emoji: '(｡･ω･｡)' },
+                { id: 'bass', name: 'まりっぺ', icon: '🎵', color: 'from-blue-300 to-blue-400', emoji: '(◔◡◔)' },
+                { id: 'keyboard', name: 'なかしゅん', icon: '🎹', color: 'from-green-300 to-green-400', emoji: '(´･ω･`)' },
+                { id: 'drums', name: 'あつしんぐぅ', icon: '🥁', color: 'from-orange-300 to-orange-400', emoji: '(＾▽＾)' }
             ];
 
             const ratings = [
-                { symbol: '💖', value: 4, color: 'bg-gradient-to-br from-pink-400 to-pink-600', label: 'だいすき！' },
-                { symbol: '😊', value: 3, color: 'bg-gradient-to-br from-blue-400 to-blue-600', label: 'いいね！' },
-                { symbol: '😅', value: 2, color: 'bg-gradient-to-br from-yellow-400 to-yellow-600', label: 'がんばる！' },
-                { symbol: '😭', value: 1, color: 'bg-gradient-to-br from-gray-400 to-gray-600', label: 'むずかしい...' }
+                { symbol: '🌟', value: 4, color: 'bg-gradient-to-br from-yellow-300 to-yellow-400 border-4 border-yellow-600', label: 'さいこう〜！', face: '＼(^o^)／' },
+                { symbol: '😊', value: 3, color: 'bg-gradient-to-br from-green-300 to-green-400 border-4 border-green-600', label: 'いいかんじ♪', face: '(◕‿◕)' },
+                { symbol: '💦', value: 2, color: 'bg-gradient-to-br from-blue-300 to-blue-400 border-4 border-blue-600', label: 'がんばるぞ〜', face: '(；´∀｀)' },
+                { symbol: '😢', value: 1, color: 'bg-gradient-to-br from-gray-300 to-gray-400 border-4 border-gray-600', label: 'むずかしいよ〜', face: '(´；ω；｀)' }
             ];
 
             // Firebaseリアルタイムリスナーの設定
@@ -404,8 +441,8 @@
                 return React.createElement('textarea', {
                     value: localValue,
                     onChange: handleChange,
-                    placeholder: "この曲についてのメモをかいてね ♪",
-                    className: "w-full h-20 p-3 text-sm border-2 border-pink-200 rounded-2xl resize-none focus:outline-none focus:ring-2 focus:ring-pink-300 focus:border-pink-300 bg-pink-50 placeholder-pink-300"
+                    placeholder: "このきょくについて めもをかいてね〜 (◕ᴗ◕✿)",
+                    className: "w-full h-24 p-4 text-lg border-4 border-gray-800 rounded-3xl resize-none focus:outline-none focus:ring-4 focus:ring-yellow-300 focus:border-yellow-500 bg-yellow-50 placeholder-gray-400 yuru-text"
                 });
             });
 
@@ -451,64 +488,76 @@
 
             // ホーム画面
             if (currentView === 'home') {
-                return React.createElement('div', { className: "min-h-screen pastel-gradient" },
+                return React.createElement('div', { className: "min-h-screen yuru-gradient" },
                     React.createElement('div', { className: "container mx-auto px-4 py-8" },
                         React.createElement('div', { className: "text-center mb-12" },
-                            React.createElement('div', { className: "text-8xl mb-6 bounce-soft" }, '🎶'),
-                            React.createElement('h1', { className: "text-5xl font-bold text-white mb-4 drop-shadow-lg" }, 
-                                '楽器パート評価アプリ'
+                            React.createElement('div', { className: "text-9xl mb-6 float" }, '🎪'),
+                            React.createElement('h1', { className: "text-6xl font-bold text-gray-800 mb-4 yuru-text" }, 
+                                'がっきょくひょうかアプリ'
                             ),
-                            React.createElement('p', { className: "text-xl text-white opacity-90 mb-2" }, 
-                                'みんなでたのしく評価しよう♪'
+                            React.createElement('p', { className: "text-2xl text-gray-700 mb-4 yuru-text" }, 
+                                'みんなでワイワイひょうかしよ〜♪'
                             ),
-                            React.createElement('div', { className: "flex justify-center gap-2 text-2xl" },
-                                React.createElement('span', { className: "sparkle" }, '✨'),
-                                React.createElement('span', { className: "heartbeat" }, '💕'),
-                                React.createElement('span', { className: "sparkle", style: { animationDelay: '0.5s' } }, '✨')
+                            React.createElement('div', { className: "flex justify-center gap-4 text-3xl" },
+                                React.createElement('span', { className: "wobble" }, '🎵'),
+                                React.createElement('span', { className: "sway", style: { animationDelay: '0.5s' } }, '🎶'),
+                                React.createElement('span', { className: "wobble", style: { animationDelay: '1s' } }, '🎵')
                             ),
                             
-                            React.createElement('div', { className: "mt-8 p-6 bg-white bg-opacity-90 rounded-3xl max-w-md mx-auto kawaii-shadow" },
-                                React.createElement('div', { className: "flex items-center justify-center gap-3 mb-3" },
+                            React.createElement('div', { className: "mt-8 p-8 yuru-card max-w-md mx-auto pop" },
+                                React.createElement('div', { className: "flex items-center justify-center gap-3 mb-4" },
                                     React.createElement('span', { 
-                                        className: `text-lg font-bold ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-pink-600'}` 
+                                        className: `text-xl font-bold ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-pink-600'} yuru-text` 
                                     }, connectionStatus),
                                     onlineUsers > 0 && React.createElement('span', { 
-                                        className: "bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-bold" 
-                                    }, `${onlineUsers}人が接続中`)
+                                        className: "bg-green-200 text-green-800 px-4 py-2 rounded-full text-lg font-bold border-2 border-green-800" 
+                                    }, `${onlineUsers}にん`)
                                 ),
-                                React.createElement('p', { className: "text-sm text-gray-600" },
+                                React.createElement('p', { className: "text-lg text-gray-700" },
                                     firebaseInitialized ? 
                                         React.createElement('span', null,
-                                            'リアルタイムで共同編集できます！', React.createElement('br'),
-                                            React.createElement('span', { className: "text-green-500 font-bold" }, '✨ みんなの変更が即座に反映されます ✨')
+                                            'みんなでいっしょにあそべるよ〜！', React.createElement('br'),
+                                            React.createElement('span', { className: "text-green-600 font-bold text-xl" }, '✨ リアルタイムきょうどうさぎょう ✨')
                                         ) :
                                         React.createElement('span', null,
-                                            'データはブラウザに保存されます ♪', React.createElement('br'),
-                                            React.createElement('span', { className: "text-pink-500" }, '安心してつかってね！')
+                                            'データはブラウザにほぞんされるよ〜', React.createElement('br'),
+                                            React.createElement('span', { className: "text-pink-600 font-bold" }, 'あんしんしてつかってね〜 (｡･ω･｡)')
                                         )
                                 )
                             )
                         ),
-                        React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto" },
+                        React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto" },
                             React.createElement('button', {
                                 onClick: () => setCurrentView('vote'),
-                                className: "bg-white rounded-3xl p-10 kawaii-shadow hover:scale-105 transition-all duration-300 group"
+                                className: "yuru-card p-12 hover:scale-105 transition-all duration-300 group relative overflow-hidden"
                             },
-                                React.createElement('div', { className: "text-6xl mb-4 group-hover:wiggle" }, '🎯'),
-                                React.createElement('h2', { className: "text-3xl font-bold mb-3 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent" }, 
-                                    '投票する'
-                                ),
-                                React.createElement('p', { className: "text-gray-600" }, '楽曲を評価してみよう！')
+                                React.createElement('div', { 
+                                    className: "absolute -top-4 -right-4 text-8xl opacity-20 group-hover:scale-150 transition-transform duration-500" 
+                                }, '🎯'),
+                                React.createElement('div', { className: "relative z-10" },
+                                    React.createElement('div', { className: "text-7xl mb-4 group-hover:wobble" }, '🗳️'),
+                                    React.createElement('h2', { className: "text-3xl font-bold mb-3 text-gray-800 yuru-text" }, 
+                                        'とうひょうする〜'
+                                    ),
+                                    React.createElement('p', { className: "text-xl text-gray-700" }, 'がっきょくをひょうかしよう！'),
+                                    React.createElement('p', { className: "text-2xl mt-2" }, '(´∀｀)σ')
+                                )
                             ),
                             React.createElement('button', {
                                 onClick: () => setCurrentView('results'),
-                                className: "bg-white rounded-3xl p-10 kawaii-shadow hover:scale-105 transition-all duration-300 group"
+                                className: "yuru-card p-12 hover:scale-105 transition-all duration-300 group relative overflow-hidden"
                             },
-                                React.createElement('div', { className: "text-6xl mb-4 group-hover:wiggle" }, '📊'),
-                                React.createElement('h2', { className: "text-3xl font-bold mb-3 bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent" }, 
-                                    '結果を見る'
-                                ),
-                                React.createElement('p', { className: "text-gray-600" }, 'みんなの評価をチェック！')
+                                React.createElement('div', { 
+                                    className: "absolute -bottom-4 -left-4 text-8xl opacity-20 group-hover:scale-150 transition-transform duration-500" 
+                                }, '📊'),
+                                React.createElement('div', { className: "relative z-10" },
+                                    React.createElement('div', { className: "text-7xl mb-4 group-hover:wobble" }, '🏆'),
+                                    React.createElement('h2', { className: "text-3xl font-bold mb-3 text-gray-800 yuru-text" }, 
+                                        'けっかをみる〜'
+                                    ),
+                                    React.createElement('p', { className: "text-xl text-gray-700" }, 'みんなのひょうかをチェック！'),
+                                    React.createElement('p', { className: "text-2xl mt-2" }, '(｡◕‿◕｡)')
+                                )
                             )
                         )
                     )
