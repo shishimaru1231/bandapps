@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>掲示板 📝 | バンド活動</title>
+    
+    <!-- ファビコン設定 -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📝</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📝</text></svg>">
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        body { 
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: #0d0d0d;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(239, 68, 68, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(251, 146, 60, 0.2) 0%, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .post-card {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .post-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .category-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .category-notice {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .category-discussion {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+        
+        .category-chat {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        
+        .category-file {
+            background: rgba(168, 85, 247, 0.2);
+            color: #d8b4fe;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .pinned-icon {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(251, 191, 36, 0.2);
+            color: #fde047;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .comment-box {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .read-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+        
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-content {
+            animation: slideUp 0.3s ease;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .file-attachment {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9ca3af;
+        }
+        
+        /* スクロールバー */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #ef4444, #ec4899);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #dc2626, #db2777);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .unread-badge {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">読み込み中...</div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Firebaseの設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+            authDomain: "band-apps.firebaseapp.com",
+            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+            projectId: "band-apps",
+            storageBucket: "band-apps.firebasestorage.app",
+            messagingSenderId: "238355659055",
+            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+            measurementId: "G-T5ZYHTSS3L"
+        };
+
+        // Firebase初期化
+        let firebaseInitialized = false;
+        let database = null;
+
+        try {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+                firebaseInitialized = true;
+            }
+        } catch (error) {
+            console.error("Firebase初期化エラー:", error);
+        }
+
+        const BoardApp = () => {
+            const [posts, setPosts] = useState({});
+            const [showNewPostModal, setShowNewPostModal] = useState(false);
+            const [selectedPost, setSelectedPost] = useState(null);
+            const [selectedCategory, setSelectedCategory] = useState('all');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [currentUser, setCurrentUser] = useState('');
+            const [readPosts, setReadPosts] = useState({});
+            const [connectionStatus, setConnectionStatus] = useState('確認中...');
+            const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
+
+            // メンバーリスト
+            const members = ['sola', 'ししまる', 'まり', 'なかしゅん', 'あつしんぐ'];
+
+            // カテゴリー
+            const categories = [
+                { id: 'notice', label: 'お知らせ', icon: '📢', class: 'category-notice' },
+                { id: 'discussion', label: '相談', icon: '💭', class: 'category-discussion' },
+                { id: 'chat', label: '雑談', icon: '💬', class: 'category-chat' },
+                { id: 'file', label: 'ファイル', icon: '📎', class: 'category-file' }
+            ];
+
+            // Firebase接続
+            useEffect(() => {
+                if (!firebaseInitialized || !database) {
+                    setConnectionStatus('ローカルモード');
+                    // ローカルストレージから読み込み
+                    const savedPosts = localStorage.getItem('bandBoardPosts');
+                    const savedUser = localStorage.getItem('bandCurrentUser');
+                    const savedReadPosts = localStorage.getItem('bandReadPosts');
+                    if (savedPosts) setPosts(JSON.parse(savedPosts));
+                    if (savedUser) setCurrentUser(savedUser);
+                    if (savedReadPosts) setReadPosts(JSON.parse(savedReadPosts));
+                    return;
+                }
+
+                // オンライン状態の管理
+                const presenceRef = database.ref('.info/connected');
+                const userRef = database.ref(`presence/${sessionId}`);
+                
+                presenceRef.on('value', (snapshot) => {
+                    if (snapshot.val() === true) {
+                        userRef.set(true);
+                        userRef.onDisconnect().remove();
+                        setConnectionStatus('オンライン');
+                    } else {
+                        setConnectionStatus('オフライン');
+                    }
+                });
+
+                // 投稿データの監視
+                const postsRef = database.ref('board/posts');
+                postsRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setPosts(data);
+                });
+
+                // 既読データの監視
+                const readRef = database.ref('board/readStatus');
+                readRef.on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    setReadPosts(data);
+                });
+
+                return () => {
+                    if (database) {
+                        presenceRef.off();
+                        postsRef.off();
+                        readRef.off();
+                        userRef.remove();
+                    }
+                };
+            }, [sessionId]);
+
+            // ローカルストレージへの保存
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandBoardPosts', JSON.stringify(posts));
+                }
+            }, [posts]);
+
+            useEffect(() => {
+                localStorage.setItem('bandCurrentUser', currentUser);
+            }, [currentUser]);
+
+            useEffect(() => {
+                if (!firebaseInitialized) {
+                    localStorage.setItem('bandReadPosts', JSON.stringify(readPosts));
+                }
+            }, [readPosts]);
+
+            // 投稿を作成
+            const createPost = (postData) => {
+                const id = Date.now().toString();
+                const newPost = {
+                    id,
+                    ...postData,
+                    author: currentUser,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    comments: [],
+                    isPinned: false,
+                    readBy: [currentUser]
+                };
+
+                if (firebaseInitialized && database) {
+                    database.ref(`board/posts/${id}`).set(newPost);
+                    database.ref(`board/readStatus/${id}/${currentUser}`).set(true);
+                } else {
+                    setPosts(prev => ({ ...prev, [id]: newPost }));
+                    setReadPosts(prev => ({ ...prev, [id]: { [currentUser]: true } }));
+                }
+
+                setShowNewPostModal(false);
+            };
+
+            // コメントを追加
+            const addComment = (postId, content) => {
+                if (!currentUser || !content.trim()) return;
+
+                const comment = {
+                    id: Date.now().toString(),
+                    content,
+                    author: currentUser,
+                    createdAt: Date.now()
+                };
+
+                if (firebaseInitialized && database) {
+                    database.ref(`board/posts/${postId}/comments/${comment.id}`).set(comment);
+                    database.ref(`board/posts/${postId}/updatedAt`).set(Date.now());
+                } else {
+                    const updatedPost = {
+                        ...posts[postId],
+                        comments: [...(posts[postId].comments || []), comment],
+                        updatedAt: Date.now()
+                    };
+                    setPosts(prev => ({ ...prev, [postId]: updatedPost }));
+                }
+            };
+
+            // 投稿をピン留め/解除
+            const togglePin = (postId) => {
+                const post = posts[postId];
+                if (!post) return;
+
+                if (firebaseInitialized && database) {
+                    database.ref(`board/posts/${postId}/isPinned`).set(!post.isPinned);
+                } else {
+                    setPosts(prev => ({
+                        ...prev,
+                        [postId]: { ...prev[postId], isPinned: !prev[postId].isPinned }
+                    }));
+                }
+            };
+
+            // 投稿を削除
+            const deletePost = (postId) => {
+                if (confirm('この投稿を削除しますか？')) {
+                    if (firebaseInitialized && database) {
+                        database.ref(`board/posts/${postId}`).remove();
+                        database.ref(`board/readStatus/${postId}`).remove();
+                    } else {
+                        const newPosts = { ...posts };
+                        delete newPosts[postId];
+                        setPosts(newPosts);
+                        
+                        const newReadPosts = { ...readPosts };
+                        delete newReadPosts[postId];
+                        setReadPosts(newReadPosts);
+                    }
+                    setSelectedPost(null);
+                }
+            };
+
+            // 既読をマーク
+            const markAsRead = (postId) => {
+                if (!currentUser) return;
+
+                if (firebaseInitialized && database) {
+                    database.ref(`board/readStatus/${postId}/${currentUser}`).set(true);
+                } else {
+                    setReadPosts(prev => ({
+                        ...prev,
+                        [postId]: { ...(prev[postId] || {}), [currentUser]: true }
+                    }));
+                }
+            };
+
+            // 投稿のフィルタリング
+            const filteredPosts = Object.values(posts)
+                .filter(post => {
+                    if (selectedCategory !== 'all' && post.category !== selectedCategory) return false;
+                    if (searchQuery) {
+                        const query = searchQuery.toLowerCase();
+                        return post.title.toLowerCase().includes(query) ||
+                               post.content.toLowerCase().includes(query);
+                    }
+                    return true;
+                })
+                .sort((a, b) => {
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+                    return b.updatedAt - a.updatedAt;
+                });
+
+            // 未読件数を取得
+            const getUnreadCount = (postId) => {
+                if (!currentUser) return false;
+                const postReads = readPosts[postId] || {};
+                return !postReads[currentUser];
+            };
+
+            // メンバーのイニシャルを取得
+            const getInitial = (name) => {
+                return name.charAt(0).toUpperCase();
+            };
+
+            // 新規投稿モーダル
+            const NewPostModal = ({ onClose }) => {
+                const [formData, setFormData] = useState({
+                    title: '',
+                    content: '',
+                    category: 'notice',
+                    files: []
+                });
+
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    if (!formData.title || !formData.content || !currentUser) {
+                        alert('タイトル、内容、投稿者名は必須です');
+                        return;
+                    }
+                    createPost(formData);
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('h2', { className: "text-2xl font-bold mb-4" }, '新規投稿'),
+                        React.createElement('form', { onSubmit: handleSubmit },
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'タイトル'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: formData.title,
+                                    onChange: (e) => setFormData({ ...formData, title: e.target.value }),
+                                    className: "input-field",
+                                    placeholder: "投稿のタイトル",
+                                    required: true
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'カテゴリー'),
+                                React.createElement('div', { className: "flex gap-2 flex-wrap" },
+                                    categories.map(cat =>
+                                        React.createElement('button', {
+                                            key: cat.id,
+                                            type: "button",
+                                            onClick: () => setFormData({ ...formData, category: cat.id }),
+                                            className: `px-4 py-2 rounded-lg ${formData.category === cat.id ? cat.class : 'bg-white/10'} transition-all`
+                                        }, 
+                                            React.createElement('span', { className: "mr-2" }, cat.icon),
+                                            cat.label
+                                        )
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "mb-4" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, '内容'),
+                                React.createElement('textarea', {
+                                    value: formData.content,
+                                    onChange: (e) => setFormData({ ...formData, content: e.target.value }),
+                                    className: "input-field",
+                                    rows: 6,
+                                    placeholder: "投稿の内容を入力...",
+                                    required: true
+                                })
+                            ),
+                            React.createElement('div', { className: "mb-6" },
+                                React.createElement('label', { className: "block text-sm font-medium mb-2" }, 'ファイル添付'),
+                                React.createElement('div', { className: "file-upload-area" },
+                                    React.createElement('span', { className: "text-gray-400" }, 
+                                        '📎 ファイルをドロップまたはクリックして選択'
+                                    )
+                                ),
+                                React.createElement('p', { className: "text-xs text-gray-500 mt-2" }, 
+                                    '※ファイルアップロード機能は準備中です'
+                                )
+                            ),
+                            React.createElement('div', { className: "flex gap-3" },
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary flex-1"
+                                }, '投稿する'),
+                                React.createElement('button', {
+                                    type: "button",
+                                    onClick: onClose,
+                                    className: "btn-secondary flex-1"
+                                }, 'キャンセル')
+                            )
+                        )
+                    )
+                );
+            };
+
+            // 投稿詳細モーダル
+            const PostDetailModal = ({ post, onClose }) => {
+                const [comment, setComment] = useState('');
+                const category = categories.find(c => c.id === post.category);
+
+                useEffect(() => {
+                    markAsRead(post.id);
+                }, [post.id]);
+
+                const handleAddComment = (e) => {
+                    e.preventDefault();
+                    if (comment.trim()) {
+                        addComment(post.id, comment);
+                        setComment('');
+                    }
+                };
+
+                return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
+                    React.createElement('div', { 
+                        className: "modal-content glass-card p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto",
+                        onClick: (e) => e.stopPropagation()
+                    },
+                        React.createElement('div', { className: "flex justify-between items-start mb-4" },
+                            React.createElement('div', { className: "flex-1" },
+                                React.createElement('div', { className: "flex items-center gap-3 mb-2" },
+                                    React.createElement('span', { className: `category-badge ${category?.class}` },
+                                        React.createElement('span', { className: "mr-1" }, category?.icon),
+                                        category?.label
+                                    ),
+                                    post.isPinned && React.createElement('span', { className: "text-yellow-400" }, '📌')
+                                ),
+                                React.createElement('h2', { className: "text-2xl font-bold mb-2" }, post.title),
+                                React.createElement('div', { className: "flex items-center gap-4 text-sm text-gray-400" },
+                                    React.createElement('div', { className: "flex items-center gap-2" },
+                                        React.createElement('div', { className: "member-avatar" }, getInitial(post.author)),
+                                        React.createElement('span', null, post.author)
+                                    ),
+                                    React.createElement('span', null, 
+                                        new Date(post.createdAt).toLocaleString('ja-JP')
+                                    )
+                                )
+                            ),
+                            React.createElement('button', {
+                                onClick: onClose,
+                                className: "text-gray-400 hover:text-white text-2xl"
+                            }, '×')
+                        ),
+                        React.createElement('div', { className: "mb-6" },
+                            React.createElement('p', { className: "whitespace-pre-wrap" }, post.content)
+                        ),
+                        post.files && post.files.length > 0 && React.createElement('div', { className: "mb-6" },
+                            React.createElement('h3', { className: "font-bold mb-2" }, '添付ファイル'),
+                            React.createElement('div', { className: "flex flex-wrap gap-2" },
+                                post.files.map((file, index) =>
+                                    React.createElement('span', { 
+                                        key: index, 
+                                        className: "file-attachment" 
+                                    }, '📎 ', file.name)
+                                )
+                            )
+                        ),
+                        React.createElement('div', { className: "border-t border-white/10 pt-6" },
+                            React.createElement('h3', { className: "font-bold mb-4" }, 
+                                `コメント (${post.comments ? Object.keys(post.comments).length : 0})`
+                            ),
+                            React.createElement('div', { className: "space-y-3 mb-6" },
+                                post.comments && Object.values(post.comments).map(comment =>
+                                    React.createElement('div', { key: comment.id, className: "comment-box" },
+                                        React.createElement('div', { className: "flex items-start gap-3" },
+                                            React.createElement('div', { className: "member-avatar" }, 
+                                                getInitial(comment.author)
+                                            ),
+                                            React.createElement('div', { className: "flex-1" },
+                                                React.createElement('div', { className: "flex items-center gap-2 mb-1" },
+                                                    React.createElement('span', { className: "font-medium" }, comment.author),
+                                                    React.createElement('span', { className: "text-xs text-gray-500" },
+                                                        new Date(comment.createdAt).toLocaleString('ja-JP')
+                                                    )
+                                                ),
+                                                React.createElement('p', { className: "text-sm" }, comment.content)
+                                            )
+                                        )
+                                    )
+                                )
+                            ),
+                            currentUser && React.createElement('form', { onSubmit: handleAddComment, className: "flex gap-3" },
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: comment,
+                                    onChange: (e) => setComment(e.target.value),
+                                    className: "input-field flex-1",
+                                    placeholder: "コメントを入力..."
+                                }),
+                                React.createElement('button', {
+                                    type: "submit",
+                                    className: "btn-primary",
+                                    disabled: !comment.trim()
+                                }, '送信')
+                            )
+                        ),
+                        post.author === currentUser && React.createElement('div', { className: "flex gap-3 mt-6 pt-6 border-t border-white/10" },
+                            React.createElement('button', {
+                                onClick: () => togglePin(post.id),
+                                className: "btn-secondary flex-1"
+                            }, post.isPinned ? 'ピン留め解除' : 'ピン留めする'),
+                            React.createElement('button', {
+                                onClick: () => deletePost(post.id),
+                                className: "btn-secondary flex-1"
+                            }, '削除')
+                        )
+                    )
+                );
+            };
+
+            return React.createElement('div', { className: "min-h-screen p-4" },
+                // ヘッダー
+                React.createElement('header', { className: "glass-card mb-6 max-w-7xl mx-auto" },
+                    React.createElement('div', { className: "p-6" },
+                        React.createElement('div', { className: "flex flex-col lg:flex-row justify-between items-center gap-4" },
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('a', {
+                                    href: "home.html",
+                                    className: "text-red-400 hover:text-red-300 transition-colors"
+                                }, '← ハブに戻る'),
+                                React.createElement('h1', { className: "text-3xl font-bold" }, '📝 掲示板')
+                            ),
+                            React.createElement('div', { className: "flex items-center gap-4" },
+                                React.createElement('div', { className: "flex items-center gap-2" },
+                                    React.createElement('span', { className: "text-sm text-gray-400" }, 'あなたの名前:'),
+                                    React.createElement('select', {
+                                        value: currentUser,
+                                        onChange: (e) => setCurrentUser(e.target.value),
+                                        className: "p-2 rounded-lg bg-white/10 border border-white/20 focus:outline-none focus:border-red-400"
+                                    },
+                                        React.createElement('option', { value: "", style: { background: '#1a1a2e' } }, '選択してください'),
+                                        members.map(member =>
+                                            React.createElement('option', { 
+                                                key: member, 
+                                                value: member,
+                                                style: { background: '#1a1a2e' }
+                                            }, member)
+                                        )
+                                    )
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => setShowNewPostModal(true),
+                                    className: "btn-primary",
+                                    disabled: !currentUser
+                                }, '+ 新規投稿'),
+                                React.createElement('span', {
+                                    className: `text-sm ${connectionStatus === 'オンライン' ? 'text-green-400' : 'text-gray-400'}`
+                                }, connectionStatus)
+                            )
+                        )
+                    )
+                ),
+
+                // フィルター・検索
+                React.createElement('div', { className: "max-w-7xl mx-auto mb-6" },
+                    React.createElement('div', { className: "glass-card p-4" },
+                        React.createElement('div', { className: "flex flex-col lg:flex-row gap-4" },
+                            React.createElement('div', { className: "flex gap-2 flex-wrap flex-1" },
+                                React.createElement('button', {
+                                    onClick: () => setSelectedCategory('all'),
+                                    className: `px-4 py-2 rounded-lg ${selectedCategory === 'all' ? 'bg-white/20' : 'bg-white/10'} transition-all`
+                                }, 'すべて'),
+                                categories.map(cat =>
+                                    React.createElement('button', {
+                                        key: cat.id,
+                                        onClick: () => setSelectedCategory(cat.id),
+                                        className: `px-4 py-2 rounded-lg ${selectedCategory === cat.id ? cat.class : 'bg-white/10'} transition-all`
+                                    }, 
+                                        React.createElement('span', { className: "mr-1" }, cat.icon),
+                                        cat.label
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: "search-box lg:w-64" },
+                                React.createElement('span', { className: "search-icon" }, '🔍'),
+                                React.createElement('input', {
+                                    type: "text",
+                                    value: searchQuery,
+                                    onChange: (e) => setSearchQuery(e.target.value),
+                                    className: "input-field pl-10",
+                                    placeholder: "検索..."
+                                })
+                            )
+                        )
+                    )
+                ),
+
+                // 投稿一覧
+                React.createElement('main', { className: "max-w-7xl mx-auto" },
+                    React.createElement('div', { className: "grid gap-4" },
+                        filteredPosts.length === 0 ?
+                            React.createElement('div', { className: "glass-card p-16 text-center" },
+                                React.createElement('p', { className: "text-gray-400 text-lg" }, '投稿がありません')
+                            ) :
+                            filteredPosts.map(post => {
+                                const category = categories.find(c => c.id === post.category);
+                                const isUnread = getUnreadCount(post.id);
+                                const commentCount = post.comments ? Object.keys(post.comments).length : 0;
+                                
+                                return React.createElement('div', {
+                                    key: post.id,
+                                    className: "post-card p-6 cursor-pointer relative",
+                                    onClick: () => setSelectedPost(post)
+                                },
+                                    post.isPinned && React.createElement('span', { className: "pinned-icon" }, 
+                                        '📌 ピン留め'
+                                    ),
+                                    React.createElement('div', { className: "flex items-start gap-4" },
+                                        React.createElement('div', { className: "member-avatar" }, 
+                                            getInitial(post.author)
+                                        ),
+                                        React.createElement('div', { className: "flex-1" },
+                                            React.createElement('div', { className: "flex items-center gap-3 mb-2" },
+                                                React.createElement('span', { className: `category-badge ${category?.class}` },
+                                                    React.createElement('span', { className: "mr-1" }, category?.icon),
+                                                    category?.label
+                                                ),
+                                                isUnread && React.createElement('span', { className: "unread-badge" })
+                                            ),
+                                            React.createElement('h3', { className: "text-lg font-bold mb-2" }, post.title),
+                                            React.createElement('p', { className: "text-gray-300 text-sm mb-3 line-clamp-2" }, 
+                                                post.content
+                                            ),
+                                            React.createElement('div', { className: "flex items-center justify-between" },
+                                                React.createElement('div', { className: "flex items-center gap-4 text-sm text-gray-400" },
+                                                    React.createElement('span', null, post.author),
+                                                    React.createElement('span', null, 
+                                                        new Date(post.updatedAt).toLocaleDateString('ja-JP')
+                                                    ),
+                                                    commentCount > 0 && React.createElement('span', null, 
+                                                        `💬 ${commentCount}`
+                                                    )
+                                                ),
+                                                React.createElement('div', { className: "read-indicator" },
+                                                    '👁 ',
+                                                    Object.keys(readPosts[post.id] || {}).length,
+                                                    '/',
+                                                    members.length
+                                                )
+                                            )
+                                        )
+                                    )
+                                );
+                            })
+                    )
+                ),
+
+                // モーダル
+                showNewPostModal && React.createElement(NewPostModal, {
+                    onClose: () => setShowNewPostModal(false)
+                }),
+
+                selectedPost && React.createElement(PostDetailModal, {
+                    post: selectedPost,
+                    onClose: () => setSelectedPost(null)
+                })
+            );
+        };
+
+        ReactDOM.render(React.createElement(BoardApp), document.getElementById('root'));
+    </script>
+</body>
+</html>
