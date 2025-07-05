@@ -102,6 +102,14 @@
             border-radius: 16px;
             padding: 20px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            min-height: 140px;
+        }
+        
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
         
         .nav-link {
@@ -179,15 +187,6 @@
 
             // 機能カード一覧
             const features = [
-                {
-                    id: 'songs',
-                    title: '楽曲評価',
-                    description: 'みんなで曲を評価',
-                    icon: '🎵',
-                    url: 'index.html',
-                    color: 'from-pink-500 to-purple-500',
-                    bgColor: 'rgba(236, 72, 153, 0.2)'
-                },
                 {
                     id: 'schedule',
                     title: 'スケジュール',
@@ -312,6 +311,37 @@
                     setNextSchedule(nextEvent);
                 });
 
+                // 掲示板の最新投稿を監視
+                const boardRef = database.ref('board/posts');
+                boardRef.on('value', (snapshot) => {
+                    const posts = snapshot.val() || {};
+                    let latestPost = null;
+                    let latestTime = 0;
+
+                    // 最新の投稿を探す
+                    Object.values(posts).forEach(post => {
+                        if (post.createdAt > latestTime) {
+                            latestTime = post.createdAt;
+                            const timeDiff = Date.now() - post.createdAt;
+                            const timeAgo = timeDiff < 60000 ? '今' :
+                                         timeDiff < 3600000 ? `${Math.floor(timeDiff / 60000)}分前` :
+                                         timeDiff < 86400000 ? `${Math.floor(timeDiff / 3600000)}時間前` :
+                                         `${Math.floor(timeDiff / 86400000)}日前`;
+                            
+                            latestPost = {
+                                title: post.title,
+                                content: post.content,
+                                author: post.author,
+                                time: timeAgo
+                            };
+                        }
+                    });
+
+                    if (latestPost) {
+                        setRecentPost(latestPost);
+                    }
+                });
+
                 // 最新の更新を監視
                 const updatesRef = database.ref();
                 const updateTypes = [
@@ -365,6 +395,7 @@
 
                 return () => {
                     schedulesRef.off();
+                    boardRef.off();
                     updateTypes.forEach(({ ref }) => {
                         database.ref(ref).off();
                     });
@@ -425,9 +456,30 @@
                 // メインコンテンツ
                 React.createElement('main', { className: "container mx-auto px-4 py-8 max-w-7xl" },
                     // クイック情報セクション
-                    React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" },
-                        // 次の予定
+                    React.createElement('div', { className: "grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" },
+                        // 最新の掲示板投稿
                         React.createElement('div', { className: "quick-info-card slide-up" },
+                            React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
+                                React.createElement('span', null, '📝'),
+                                '掲示板'
+                            ),
+                            recentPost ? React.createElement('div', null,
+                                React.createElement('p', { className: "text-xl font-bold text-pink-400" }, 
+                                    recentPost.title
+                                ),
+                                React.createElement('p', { className: "text-gray-300 text-sm mt-1 line-clamp-2" }, 
+                                    recentPost.content
+                                ),
+                                React.createElement('p', { className: "text-sm text-gray-400 mt-2" }, 
+                                    `${recentPost.author} - ${recentPost.time}`
+                                )
+                            ) : React.createElement('p', { className: "text-gray-400" }, 
+                                '新しい投稿はありません'
+                            )
+                        ),
+                        
+                        // 次の予定
+                        React.createElement('div', { className: "quick-info-card slide-up", style: { animationDelay: '0.1s' } },
                             React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
                                 React.createElement('span', null, '📍'),
                                 '次の予定'
@@ -448,7 +500,7 @@
                         ),
 
                         // 最新の更新
-                        React.createElement('div', { className: "quick-info-card slide-up", style: { animationDelay: '0.1s' } },
+                        React.createElement('div', { className: "quick-info-card slide-up", style: { animationDelay: '0.2s' } },
                             React.createElement('h3', { className: "text-lg font-bold mb-3 flex items-center gap-2" },
                                 React.createElement('span', null, '🔔'),
                                 '最新の更新'
