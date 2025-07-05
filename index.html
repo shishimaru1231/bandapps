@@ -140,7 +140,7 @@
             const [votes, setVotes] = useState({});
             const [hasVoted, setHasVoted] = useState({});
             const [memos, setMemos] = useState({});
-            const [connectionStatus, setConnectionStatus] = useState('🔄 接続中...');
+            const [connectionStatus, setConnectionStatus] = useState('接続中...');
             const [onlineUsers, setOnlineUsers] = useState(0);
             const [sessionId] = useState(() => Math.random().toString(36).substr(2, 9));
             const [firebaseError, setFirebaseError] = useState(!firebaseInitialized);
@@ -172,11 +172,11 @@
             ];
 
             const instruments = [
-                { id: 'vocal', name: 'sola', icon: '🎤', color: 'from-pink-400 to-pink-600', emoji: '♪' },
-                { id: 'guitar', name: 'ししまる', icon: '🎸', color: 'from-purple-400 to-purple-600', emoji: '♪' },
-                { id: 'bass', name: 'まり', icon: '🎵', color: 'from-blue-400 to-blue-600', emoji: '♪' },
-                { id: 'keyboard', name: 'なかしゅん', icon: '🎹', color: 'from-green-400 to-green-600', emoji: '♪' },
-                { id: 'drums', name: 'あつしんぐ', icon: '🥁', color: 'from-orange-400 to-orange-600', emoji: '♪' }
+                { id: 'vocal', name: 'sola', icon: '🎤', color: 'from-pink-400 to-pink-600' },
+                { id: 'guitar', name: 'ししまる', icon: '🎸', color: 'from-purple-400 to-purple-600' },
+                { id: 'bass', name: 'まり', icon: '🎵', color: 'from-blue-400 to-blue-600' },
+                { id: 'keyboard', name: 'なかしゅん', icon: '🎹', color: 'from-green-400 to-green-600' },
+                { id: 'drums', name: 'あつしんぐ', icon: '🥁', color: 'from-orange-400 to-orange-600' }
             ];
 
             const ratings = [
@@ -197,7 +197,7 @@
                         setVotes(savedVotes);
                         setHasVoted(savedHasVoted);
                         setMemos(savedMemos);
-                        setConnectionStatus('💾 ローカル保存');
+                        setConnectionStatus('ローカル保存');
                     } catch (error) {
                         console.log('データ読み込みエラー:', error);
                     }
@@ -212,9 +212,9 @@
                     if (snapshot.val() === true) {
                         userRef.set(true);
                         userRef.onDisconnect().remove();
-                        setConnectionStatus('🌐 オンライン');
+                        setConnectionStatus('オンライン');
                     } else {
-                        setConnectionStatus('📡 再接続中...');
+                        setConnectionStatus('再接続中...');
                     }
                 });
 
@@ -432,38 +432,28 @@
 
             // Firebase設定画面
                             if (firebaseError) {
-                return React.createElement('div', { className: "min-h-screen sanrio-gradient flex items-center justify-center p-4" },
-                    React.createElement('div', { className: "cute-card stamp-shadow p-8 max-w-2xl w-full" },
+                return React.createElement('div', { className: "min-h-screen pop-gradient flex items-center justify-center p-4" },
+                    React.createElement('div', { className: "pop-card pop-shadow-lg p-8 max-w-2xl w-full" },
                         React.createElement('div', { className: "text-center mb-6" },
-                            React.createElement('div', { className: "text-6xl mb-4 bounce-rotate" }, '🔥'),
-                            React.createElement('h1', { className: "text-3xl font-black text-pink-600 mb-4" }, 
-                                React.createElement('span', { className: "stamp-text text-pink-600 rotate-[-5deg] inline-block" }, 'Firebase'),
-                                React.createElement('span', { className: "stamp-text text-yellow-500 rotate-[5deg] inline-block mx-2" }, 'せってい'),
-                                React.createElement('span', { className: "stamp-text text-green-500 rotate-[-3deg] inline-block" }, 'ひつよう！')
-                            ),
-                            React.createElement('p', { className: "text-lg font-bold text-gray-700 mb-6" }, 
-                                'リアルタイムきょうどうへんしゅうをつかうには、',
-                                React.createElement('br'),
-                                'Firebaseのせっていがひつようです💕'
+                            React.createElement('div', { className: "text-6xl mb-4" }, '🔥'),
+                            React.createElement('h1', { className: "text-3xl font-bold text-gray-800 mb-4" }, 'Firebase設定が必要です'),
+                            React.createElement('p', { className: "text-gray-600 mb-6" }, 
+                                'リアルタイム共同編集を使用するには、Firebaseの設定が必要です。'
                             )
                         ),
-                        React.createElement('div', { className: "bg-pink-100 rounded-2xl p-6 mb-6 border-4 border-pink-300" },
-                            React.createElement('h2', { className: "text-xl font-black text-pink-600 mb-3" }, 
-                                React.createElement('span', { className: "sticker-badge bg-pink-500 text-white" }, 'せっていしゅじゅん')
-                            ),
-                            React.createElement('ol', { className: "text-left space-y-2 text-gray-700 font-bold" },
-                                React.createElement('li', null, '1️⃣ Firebase Console (https://console.firebase.google.com) にアクセス'),
-                                React.createElement('li', null, '2️⃣ あたらしいプロジェクトをさくせい'),
-                                React.createElement('li', null, '3️⃣ Realtime Databaseをゆうこうか'),
-                                React.createElement('li', null, '4️⃣ プロジェクトせっていからじょうほうをコピー'),
-                                React.createElement('li', null, '5️⃣ このHTMLファイルの firebaseConfig ぶぶんにはりつけ')
+                        React.createElement('div', { className: "bg-purple-50 rounded-lg p-6 mb-6" },
+                            React.createElement('h2', { className: "text-xl font-bold text-purple-700 mb-3" }, '設定手順'),
+                            React.createElement('ol', { className: "text-left space-y-2 text-gray-700" },
+                                React.createElement('li', null, '1. Firebase Console (https://console.firebase.google.com) にアクセス'),
+                                React.createElement('li', null, '2. 新しいプロジェクトを作成'),
+                                React.createElement('li', null, '3. Realtime Databaseを有効化'),
+                                React.createElement('li', null, '4. プロジェクト設定から設定情報をコピー'),
+                                React.createElement('li', null, '5. このHTMLファイルの firebaseConfig 部分に貼り付け')
                             )
                         ),
-                        React.createElement('div', { className: "bg-blue-100 rounded-2xl p-6 mb-6 border-4 border-blue-300" },
-                            React.createElement('h3', { className: "text-lg font-black text-blue-600 mb-2" }, 
-                                React.createElement('span', { className: "sticker-badge bg-blue-500 text-white" }, 'データベースルール')
-                            ),
-                            React.createElement('pre', { className: "bg-white rounded-lg p-3 text-sm overflow-x-auto border-4 border-gray-300" },
+                        React.createElement('div', { className: "bg-blue-50 rounded-lg p-6 mb-6" },
+                            React.createElement('h3', { className: "text-lg font-bold text-blue-700 mb-2" }, 'Realtime Databaseルール'),
+                            React.createElement('pre', { className: "bg-white rounded-lg p-3 text-sm overflow-x-auto" },
                                 `{
   "rules": {
     ".read": true,
@@ -474,12 +464,8 @@
                         ),
                         React.createElement('button', {
                             onClick: () => setFirebaseError(false),
-                            className: "bg-gradient-to-r from-pink-500 to-yellow-500 text-white px-8 py-4 rounded-full font-black text-xl hover:scale-105 transition-all duration-300 stamp-shadow"
-                        }, 
-                            React.createElement('span', { className: "mr-2" }, '💾'),
-                            'ローカルモードでつづける',
-                            React.createElement('span', { className: "ml-2" }, '💾')
-                        )
+                            className: "bg-gradient-to-r from-purple-600 to-purple-700 text-white px-8 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300"
+                        }, 'ローカルモードで続ける')
                     )
                 );
             }
@@ -511,7 +497,7 @@
                                         React.createElement('span', null,
                                             'リアルタイムで共同編集できます', React.createElement('br'),
                                             React.createElement('span', { className: "text-green-600 font-semibold" }, 
-                                                '✨ みんなの変更が即座に反映 ✨'
+                                                'みんなの変更が即座に反映'
                                             )
                                         ) :
                                         React.createElement('span', null,
