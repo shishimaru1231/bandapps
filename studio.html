@@ -197,6 +197,8 @@
             const [tasks, setTasks] = useState([]);
             const [notes, setNotes] = useState({ good: '', improve: '' });
             const [songRatings, setSongRatings] = useState({});
+            const [songs, setSongs] = useState(['曲1', '曲2', '曲3']);
+            const [editingSongIndex, setEditingSongIndex] = useState(null);
             const [uploading, setUploading] = useState(false);
             const [dragOver, setDragOver] = useState(false);
             const fileInputRef = useRef(null);
@@ -214,11 +216,28 @@
                     notes: { good: '', improve: '' },
                     tasks: [],
                     audioFiles: [],
-                    songRatings: {}
+                    songRatings: {},
+                    songs: ['曲1', '曲2', '曲3'] // デフォルトの曲リスト
                 };
                 setCurrentSession(newSession);
                 if (database) {
                     database.ref(`studio_sessions/${newSession.id}`).set(newSession);
+                }
+            };
+
+            // セッション削除
+            const deleteSession = (sessionId) => {
+                if (database && window.confirm('このセッションを削除してもよろしいですか？')) {
+                    database.ref(`studio_sessions/${sessionId}`).remove();
+                    // 現在のセッションが削除された場合、新しいセッションを選択
+                    if (currentSession?.id === sessionId) {
+                        const remainingSessions = sessions.filter(s => s.id !== sessionId);
+                        if (remainingSessions.length > 0) {
+                            setCurrentSession(remainingSessions[0]);
+                        } else {
+                            setCurrentSession(null);
+                        }
+                    }
                 }
             };
 
@@ -334,6 +353,56 @@
                 }
             };
 
+            // 曲名の更新
+            const updateSongName = (index, newName) => {
+                const newSongs = [...songs];
+                const oldName = newSongs[index];
+                newSongs[index] = newName;
+                setSongs(newSongs);
+                
+                // 評価も新しい曲名に移行
+                if (songRatings[oldName]) {
+                    const newRatings = { ...songRatings };
+                    newRatings[newName] = newRatings[oldName];
+                    delete newRatings[oldName];
+                    setSongRatings(newRatings);
+                    
+                    if (database && currentSession) {
+                        database.ref(`studio_sessions/${currentSession.id}/songRatings`).set(newRatings);
+                    }
+                }
+                
+                if (database && currentSession) {
+                    database.ref(`studio_sessions/${currentSession.id}/songs`).set(newSongs);
+                }
+            };
+
+            // 曲の追加
+            const addSong = () => {
+                const newSongs = [...songs, `曲${songs.length + 1}`];
+                setSongs(newSongs);
+                if (database && currentSession) {
+                    database.ref(`studio_sessions/${currentSession.id}/songs`).set(newSongs);
+                }
+            };
+
+            // 曲の削除
+            const deleteSong = (index) => {
+                const songName = songs[index];
+                const newSongs = songs.filter((_, i) => i !== index);
+                setSongs(newSongs);
+                
+                // 評価も削除
+                const newRatings = { ...songRatings };
+                delete newRatings[songName];
+                setSongRatings(newRatings);
+                
+                if (database && currentSession) {
+                    database.ref(`studio_sessions/${currentSession.id}/songs`).set(newSongs);
+                    database.ref(`studio_sessions/${currentSession.id}/songRatings`).set(newRatings);
+                }
+            };
+
             // 現在のセッションのデータを監視
             useEffect(() => {
                 if (!database || !currentSession) return;
@@ -364,11 +433,18 @@
                     setSongRatings(data);
                 });
                 
+                // 曲リスト
+                sessionRef.child('songs').on('value', (snapshot) => {
+                    const data = snapshot.val() || ['曲1', '曲2', '曲3'];
+                    setSongs(data);
+                });
+                
                 return () => {
                     sessionRef.child('audioFiles').off();
                     sessionRef.child('tasks').off();
                     sessionRef.child('notes').off();
                     sessionRef.child('songRatings').off();
+                    sessionRef.child('songs').off();
                 };
             }, [currentSession]);
 
@@ -479,21 +555,66 @@
                                 </div>
 
                                 <div className="glass-card p-6">
-                                    <h3 className="text-xl font-bold mb-4">曲ごとの評価</h3>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-xl font-bold">曲ごとの評価</h3>
+                                        <button
+                                            onClick={addSong}
+                                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            + 曲を追加
+                                        </button>
+                                    </div>
                                     <div className="space-y-4">
-                                        {['曲A', '曲B', '曲C'].map((song) => (
-                                            <div key={song} className="flex items-center justify-between p-4 bg-black/20 rounded-lg">
-                                                <span className="font-medium">{song}</span>
-                                                <div className="flex gap-2">
-                                                    {[1, 2, 3, 4, 5].map((star) => (
-                                                        <span
-                                                            key={star}
-                                                            className={`rating-star ${songRatings[song] >= star ? 'text-yellow-400' : 'text-gray-600'}`}
-                                                            onClick={() => rateSong(song, star)}
-                                                        >
-                                                            ★
-                                                        </span>
-                                                    ))}
+                                        {songs.map((song, index) => (
+                                            <div key={index} className="flex items-center justify-between p-4 bg-black/20 rounded-lg">
+                                                {editingSongIndex === index ? (
+                                                    <input
+                                                        type="text"
+                                                        value={song}
+                                                        onChange={(e) => {
+                                                            const newSongs = [...songs];
+                                                            newSongs[index] = e.target.value;
+                                                            setSongs(newSongs);
+                                                        }}
+                                                        onBlur={() => {
+                                                            updateSongName(index, song);
+                                                            setEditingSongIndex(null);
+                                                        }}
+                                                        onKeyPress={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                updateSongName(index, song);
+                                                                setEditingSongIndex(null);
+                                                            }
+                                                        }}
+                                                        className="bg-black/30 px-3 py-1 rounded-lg outline-none border border-emerald-500"
+                                                        autoFocus
+                                                    />
+                                                ) : (
+                                                    <span 
+                                                        className="font-medium cursor-pointer hover:text-emerald-400"
+                                                        onClick={() => setEditingSongIndex(index)}
+                                                    >
+                                                        {song}
+                                                    </span>
+                                                )}
+                                                <div className="flex items-center gap-4">
+                                                    <div className="flex gap-2">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                            <span
+                                                                key={star}
+                                                                className={`rating-star ${songRatings[song] >= star ? 'text-yellow-400' : 'text-gray-600'}`}
+                                                                onClick={() => rateSong(song, star)}
+                                                            >
+                                                                ★
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        onClick={() => deleteSong(index)}
+                                                        className="text-red-400 hover:text-red-500 text-sm"
+                                                    >
+                                                        削除
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -680,17 +801,27 @@
                             {sessions.map((session) => (
                                 <div
                                     key={session.id}
-                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                    className={`p-3 rounded-lg cursor-pointer transition-colors relative group ${
                                         currentSession?.id === session.id
                                             ? 'bg-emerald-500/20 border border-emerald-500/50'
                                             : 'bg-black/20 hover:bg-black/30'
                                     }`}
-                                    onClick={() => setCurrentSession(session)}
                                 >
-                                    <p className="font-medium">{session.name}</p>
-                                    <p className="text-sm text-gray-400">
-                                        {new Date(session.date).toLocaleDateString('ja-JP')}
-                                    </p>
+                                    <div onClick={() => setCurrentSession(session)}>
+                                        <p className="font-medium">{session.name}</p>
+                                        <p className="text-sm text-gray-400">
+                                            {new Date(session.date).toLocaleDateString('ja-JP')}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteSession(session.id);
+                                        }}
+                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-500"
+                                    >
+                                        ✕
+                                    </button>
                                 </div>
                             ))}
                         </div>
