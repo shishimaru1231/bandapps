@@ -168,16 +168,18 @@
 
             // メモ更新（完全に独立した処理）
             const updateMemoStable = useCallback((songId, newValue) => {
-                const updatedMemos = { ...memos };
-                if (newValue === '') {
-                    delete updatedMemos[songId];
-                } else {
-                    updatedMemos[songId] = newValue;
-                }
-                
-                setMemos(updatedMemos);
-                localStorage.setItem('musicMemos', JSON.stringify(updatedMemos));
-            }, [memos]);
+                setMemos(prevMemos => {
+                    const updatedMemos = { ...prevMemos };
+                    if (newValue === '') {
+                        delete updatedMemos[songId];
+                    } else {
+                        updatedMemos[songId] = newValue;
+                    }
+                    
+                    localStorage.setItem('musicMemos', JSON.stringify(updatedMemos));
+                    return updatedMemos;
+                });
+            }, []);
 
             // 投票リセット
             const removeVote = (songId, instrument) => {
@@ -244,6 +246,16 @@
             const StableMemoTextArea = memo(({ songId, initialValue, onUpdate }) => {
                 const [value, setValue] = useState(initialValue || '');
                 const timeoutRef = useRef(null);
+                const isFirstRender = useRef(true);
+                
+                // 初期値の同期
+                useEffect(() => {
+                    if (isFirstRender.current) {
+                        isFirstRender.current = false;
+                        return;
+                    }
+                    setValue(initialValue || '');
+                }, [initialValue]);
                 
                 const handleChange = (e) => {
                     const newValue = e.target.value;
@@ -260,13 +272,11 @@
                     }, 1000);
                 };
 
-                // コンポーネントのアンマウント時にタイマークリア
+                // コンポーネントのアンマウント時にタイマークリアと保存
                 useEffect(() => {
                     return () => {
                         if (timeoutRef.current) {
                             clearTimeout(timeoutRef.current);
-                            // 最後の値を保存
-                            onUpdate(songId, value);
                         }
                     };
                 }, []);
@@ -279,7 +289,7 @@
                 });
             }, (prevProps, nextProps) => {
                 // songIdが同じならば再レンダリングしない
-                return prevProps.songId === nextProps.songId;
+                return prevProps.songId === nextProps.songId && prevProps.initialValue === nextProps.initialValue;
             });
 
             // ホーム画面
