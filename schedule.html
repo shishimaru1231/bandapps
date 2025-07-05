@@ -517,6 +517,18 @@
             const EventDetailModal = ({ event, dateKey, onClose }) => {
                 const eventType = eventTypes.find(t => t.id === event.type);
                 const attendance = event.attendance || {};
+                const [showEditModal, setShowEditModal] = useState(false);
+
+                if (showEditModal) {
+                    return React.createElement(EventModal, {
+                        event: event,
+                        date: new Date(event.date),
+                        onClose: () => {
+                            setShowEditModal(false);
+                            onClose();
+                        }
+                    });
+                }
 
                 return React.createElement('div', { className: "modal-backdrop", onClick: onClose },
                     React.createElement('div', { 
@@ -591,15 +603,15 @@
                         ),
                         React.createElement('div', { className: "flex gap-3" },
                             React.createElement('button', {
-                                onClick: () => {
-                                    setEditingEvent(event);
-                                    setSelectedDate(new Date(event.date));
-                                    setShowEventModal(true);
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    setShowEditModal(true);
                                 },
                                 className: "btn-secondary flex-1"
                             }, '編集'),
                             React.createElement('button', {
-                                onClick: () => {
+                                onClick: (e) => {
+                                    e.stopPropagation();
                                     if (confirm('このイベントを削除しますか？')) {
                                         deleteEvent(dateKey, event.id);
                                         onClose();
