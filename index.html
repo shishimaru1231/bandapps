@@ -19,107 +19,151 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
         body { 
-            font-family: 'Kiwi Maru', serif;
-            background: #e8f4f8;
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: #fff5f5;
             background-image: 
-                radial-gradient(circle at 20% 80%, #ffd4e5 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, #d4e4f7 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, #fffacd 0%, transparent 50%);
+                repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255, 192, 203, .1) 35px, rgba(255, 192, 203, .1) 70px),
+                repeating-linear-gradient(-45deg, transparent, transparent 35px, rgba(135, 206, 235, .1) 35px, rgba(135, 206, 235, .1) 70px);
         }
         
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(-5deg); }
-            33% { transform: translateY(-15px) rotate(0deg); }
-            66% { transform: translateY(-5px) rotate(5deg); }
+        @keyframes bounce-rotate {
+            0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+            25% { transform: translateY(-10px) rotate(-10deg) scale(1.1); }
+            50% { transform: translateY(-20px) rotate(0deg) scale(1.2); }
+            75% { transform: translateY(-10px) rotate(10deg) scale(1.1); }
         }
         
-        @keyframes wobble {
-            0%, 100% { transform: rotate(-10deg) scale(1); }
-            25% { transform: rotate(10deg) scale(1.1); }
-            50% { transform: rotate(-10deg) scale(1); }
-            75% { transform: rotate(10deg) scale(1.1); }
+        @keyframes rainbow-border {
+            0%, 100% { border-color: #ff6b9d; }
+            25% { border-color: #ffd93d; }
+            50% { border-color: #6bcf7f; }
+            75% { border-color: #95e1d3; }
         }
         
-        @keyframes blink {
-            0%, 90%, 100% { transform: scaleY(1); }
-            95% { transform: scaleY(0.1); }
+        @keyframes star-twinkle {
+            0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1) rotate(180deg); }
         }
         
-        @keyframes pop {
-            0% { transform: scale(0) rotate(0deg); opacity: 0; }
-            50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
-            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        @keyframes heart-beat {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.3); }
+            50% { transform: scale(0.9); }
+            75% { transform: scale(1.2); }
         }
         
-        @keyframes sway {
-            0%, 100% { transform: translateX(0) rotate(0deg); }
-            25% { transform: translateX(-10px) rotate(-5deg); }
-            75% { transform: translateX(10px) rotate(5deg); }
+        @keyframes cute-wave {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(20deg); }
+            75% { transform: rotate(-20deg); }
         }
         
-        .float { animation: float 3s ease-in-out infinite; }
-        .wobble { animation: wobble 2s ease-in-out infinite; }
-        .blink { animation: blink 3s ease-in-out infinite; }
-        .pop { animation: pop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        .sway { animation: sway 4s ease-in-out infinite; }
+        .bounce-rotate { animation: bounce-rotate 2s ease-in-out infinite; }
+        .rainbow-border { animation: rainbow-border 3s ease-in-out infinite; }
+        .star-twinkle { animation: star-twinkle 2s ease-in-out infinite; }
+        .heart-beat { animation: heart-beat 1.5s ease-in-out infinite; }
+        .cute-wave { animation: cute-wave 1s ease-in-out infinite; }
         
-        .yuru-gradient {
-            background: linear-gradient(180deg, #a8e6cf 0%, #dcedc1 25%, #ffd3b6 50%, #ffaaa5 75%, #ff8b94 100%);
+        .sanrio-gradient {
+            background: linear-gradient(45deg, #ff6b9d 0%, #ffd93d 25%, #6bcf7f 50%, #95e1d3 75%, #c7ceea 100%);
         }
         
-        .yuru-shadow {
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1), 
-                        0 4px 8px rgba(0, 0, 0, 0.05),
-                        inset 0 2px 4px rgba(255, 255, 255, 0.5);
+        .stamp-shadow {
+            box-shadow: 
+                4px 4px 0px #ff1493,
+                8px 8px 0px rgba(255, 20, 147, 0.3),
+                12px 12px 20px rgba(0, 0, 0, 0.1);
         }
         
-        .yuru-card {
+        .cute-card {
             background: white;
-            border: 4px solid #333;
-            border-radius: 30px;
+            border: 4px solid #ff1493;
+            border-radius: 25px;
             position: relative;
+            overflow: hidden;
         }
         
-        .yuru-card::before {
-            content: '';
+        .cute-card::before {
+            content: '❤';
             position: absolute;
-            top: -6px;
-            left: -6px;
-            right: -6px;
-            bottom: -6px;
-            background: #333;
-            border-radius: 34px;
-            z-index: -1;
+            top: -20px;
+            right: -20px;
+            font-size: 80px;
+            opacity: 0.1;
+            transform: rotate(-15deg);
+        }
+        
+        .cute-card::after {
+            content: '★';
+            position: absolute;
+            bottom: -20px;
+            left: -20px;
+            font-size: 80px;
+            opacity: 0.1;
+            transform: rotate(15deg);
+        }
+        
+        .sticker-badge {
+            display: inline-block;
+            background: #ff1493;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            transform: rotate(-5deg);
+            margin: 0 5px;
         }
         
         /* カスタムスクロールバー */
         ::-webkit-scrollbar {
-            width: 16px;
+            width: 20px;
         }
         
         ::-webkit-scrollbar-track {
-            background: #f0f9ff;
+            background: #fff0f5;
             border-radius: 20px;
-            border: 2px solid #333;
         }
         
         ::-webkit-scrollbar-thumb {
-            background: #a8e6cf;
+            background: linear-gradient(45deg, #ff6b9d, #ffd93d, #6bcf7f);
             border-radius: 20px;
-            border: 2px solid #333;
+            border: 3px solid #fff0f5;
         }
         
-        ::-webkit-scrollbar-thumb:hover {
-            background: #7dd3b0;
+        /* スタンプっぽいテキスト */
+        .stamp-text {
+            display: inline-block;
+            padding: 8px 16px;
+            background: white;
+            border: 3px solid currentColor;
+            border-radius: 25px;
+            font-weight: bold;
+            position: relative;
         }
         
-        /* ゆるキャラっぽい丸みを帯びたスタイル */
-        .yuru-text {
-            font-weight: 500;
-            letter-spacing: 0.05em;
-            text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+        .sparkle-container {
+            position: relative;
+        }
+        
+        .sparkle-container::before,
+        .sparkle-container::after {
+            content: '✨';
+            position: absolute;
+            font-size: 20px;
+        }
+        
+        .sparkle-container::before {
+            top: -10px;
+            left: -20px;
+            animation: star-twinkle 2s ease-in-out infinite;
+        }
+        
+        .sparkle-container::after {
+            bottom: -10px;
+            right: -20px;
+            animation: star-twinkle 2s ease-in-out infinite 0.5s;
         }
     </style>
 </head>
@@ -193,18 +237,18 @@
             ];
 
             const instruments = [
-                { id: 'vocal', name: 'そらぽん', icon: '🎤', color: 'from-pink-300 to-pink-400', emoji: '(◕ᴗ◕✿)' },
-                { id: 'guitar', name: 'ししまるん', icon: '🎸', color: 'from-purple-300 to-purple-400', emoji: '(｡･ω･｡)' },
-                { id: 'bass', name: 'まりっぺ', icon: '🎵', color: 'from-blue-300 to-blue-400', emoji: '(◔◡◔)' },
-                { id: 'keyboard', name: 'なかしゅん', icon: '🎹', color: 'from-green-300 to-green-400', emoji: '(´･ω･`)' },
-                { id: 'drums', name: 'あつしんぐぅ', icon: '🥁', color: 'from-orange-300 to-orange-400', emoji: '(＾▽＾)' }
+                { id: 'vocal', name: 'そらぴょん', icon: '🎤', color: 'from-pink-300 to-pink-500', emoji: '💕', stamp: 'LOVELY!' },
+                { id: 'guitar', name: 'ししまるりん', icon: '🎸', color: 'from-purple-300 to-purple-500', emoji: '⭐', stamp: 'ROCK!' },
+                { id: 'bass', name: 'まりたん', icon: '🎵', color: 'from-blue-300 to-blue-500', emoji: '🌟', stamp: 'GROOVY!' },
+                { id: 'keyboard', name: 'なかしゅんぴ', icon: '🎹', color: 'from-green-300 to-green-500', emoji: '✨', stamp: 'MAGIC!' },
+                { id: 'drums', name: 'あっちゃん', icon: '🥁', color: 'from-orange-300 to-orange-500', emoji: '🎉', stamp: 'BEAT!' }
             ];
 
             const ratings = [
-                { symbol: '🌟', value: 4, color: 'bg-gradient-to-br from-yellow-300 to-yellow-400 border-4 border-yellow-600', label: 'さいこう〜！', face: '＼(^o^)／' },
-                { symbol: '😊', value: 3, color: 'bg-gradient-to-br from-green-300 to-green-400 border-4 border-green-600', label: 'いいかんじ♪', face: '(◕‿◕)' },
-                { symbol: '💦', value: 2, color: 'bg-gradient-to-br from-blue-300 to-blue-400 border-4 border-blue-600', label: 'がんばるぞ〜', face: '(；´∀｀)' },
-                { symbol: '😢', value: 1, color: 'bg-gradient-to-br from-gray-300 to-gray-400 border-4 border-gray-600', label: 'むずかしいよ〜', face: '(´；ω；｀)' }
+                { symbol: '💖', value: 4, color: 'bg-gradient-to-br from-pink-400 to-pink-600 border-4 border-pink-700', label: 'だいすき！', stamp: 'PERFECT!', face: '♪(๑ᴖ◡ᴖ๑)♪' },
+                { symbol: '💚', value: 3, color: 'bg-gradient-to-br from-green-400 to-green-600 border-4 border-green-700', label: 'いいね！', stamp: 'GOOD!', face: '(*´▽｀*)' },
+                { symbol: '💛', value: 2, color: 'bg-gradient-to-br from-yellow-400 to-yellow-600 border-4 border-yellow-700', label: 'がんばる！', stamp: 'FIGHT!', face: '(๑•̀ㅂ•́)و✧' },
+                { symbol: '💙', value: 1, color: 'bg-gradient-to-br from-blue-400 to-blue-600 border-4 border-blue-700', label: 'れんしゅう！', stamp: 'TRY!', face: '(´；ω；｀)' }
             ];
 
             // Firebaseリアルタイムリスナーの設定
@@ -446,8 +490,8 @@
                 return React.createElement('textarea', {
                     value: localValue,
                     onChange: handleChange,
-                    placeholder: "このきょくについて めもをかいてね〜 (◕ᴗ◕✿)",
-                    className: "w-full h-24 p-4 text-lg border-4 border-gray-800 rounded-3xl resize-none focus:outline-none focus:ring-4 focus:ring-yellow-300 focus:border-yellow-500 bg-yellow-50 placeholder-gray-400 yuru-text"
+                    placeholder: "このきょくについて めもをかいてね〜💕",
+                    className: "w-full h-24 p-4 text-lg border-4 border-pink-500 rounded-3xl resize-none focus:outline-none focus:ring-4 focus:ring-pink-300 focus:border-pink-600 bg-pink-50 placeholder-pink-400 font-bold rainbow-border"
                 });
             });
 
@@ -493,40 +537,53 @@
 
             // ホーム画面
             if (currentView === 'home') {
-                return React.createElement('div', { className: "min-h-screen yuru-gradient" },
+                return React.createElement('div', { className: "min-h-screen sanrio-gradient" },
                     React.createElement('div', { className: "container mx-auto px-4 py-8" },
                         React.createElement('div', { className: "text-center mb-12" },
-                            React.createElement('div', { className: "text-9xl mb-6 float" }, '🎪'),
-                            React.createElement('h1', { className: "text-6xl font-bold text-gray-800 mb-4 yuru-text" }, 
-                                'がっきょくひょうかアプリ'
+                            React.createElement('div', { className: "text-9xl mb-6 bounce-rotate" }, '🎀'),
+                            React.createElement('h1', { className: "text-6xl font-black text-white mb-4" }, 
+                                React.createElement('span', { className: "stamp-text text-pink-600 rotate-[-5deg] inline-block" }, 'がっきょく'),
+                                React.createElement('span', { className: "stamp-text text-yellow-500 rotate-[5deg] inline-block mx-2" }, 'ひょうか'),
+                                React.createElement('span', { className: "stamp-text text-green-500 rotate-[-3deg] inline-block" }, 'アプリ')
                             ),
-                            React.createElement('p', { className: "text-2xl text-gray-700 mb-4 yuru-text" }, 
-                                'みんなでワイワイひょうかしよ〜♪'
+                            React.createElement('p', { className: "text-3xl text-white font-bold mb-4" }, 
+                                React.createElement('span', { className: "sticker-badge bg-pink-500" }, 'みんなで'),
+                                React.createElement('span', { className: "sticker-badge bg-yellow-500" }, 'たのしく'),
+                                React.createElement('span', { className: "sticker-badge bg-green-500" }, 'ひょうか♪')
                             ),
-                            React.createElement('div', { className: "flex justify-center gap-4 text-3xl" },
-                                React.createElement('span', { className: "wobble" }, '🎵'),
-                                React.createElement('span', { className: "sway", style: { animationDelay: '0.5s' } }, '🎶'),
-                                React.createElement('span', { className: "wobble", style: { animationDelay: '1s' } }, '🎵')
+                            React.createElement('div', { className: "flex justify-center gap-4 text-4xl" },
+                                React.createElement('span', { className: "heart-beat" }, '💕'),
+                                React.createElement('span', { className: "star-twinkle", style: { animationDelay: '0.3s' } }, '⭐'),
+                                React.createElement('span', { className: "heart-beat", style: { animationDelay: '0.6s' } }, '💕'),
+                                React.createElement('span', { className: "star-twinkle", style: { animationDelay: '0.9s' } }, '✨')
                             ),
                             
-                            React.createElement('div', { className: "mt-8 p-8 yuru-card max-w-md mx-auto pop" },
+                            React.createElement('div', { className: "mt-8 p-8 cute-card stamp-shadow max-w-md mx-auto sparkle-container" },
                                 React.createElement('div', { className: "flex items-center justify-center gap-3 mb-4" },
                                     React.createElement('span', { 
-                                        className: `text-xl font-bold ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-pink-600'} yuru-text` 
+                                        className: `text-xl font-black ${connectionStatus.includes('オンライン') ? 'text-green-600' : 'text-pink-600'}` 
                                     }, connectionStatus),
                                     onlineUsers > 0 && React.createElement('span', { 
-                                        className: "bg-green-200 text-green-800 px-4 py-2 rounded-full text-lg font-bold border-2 border-green-800" 
-                                    }, `${onlineUsers}にん`)
+                                        className: "sticker-badge bg-green-500 text-white" 
+                                    }, `${onlineUsers}にん💕`)
                                 ),
-                                React.createElement('p', { className: "text-lg text-gray-700" },
+                                React.createElement('p', { className: "text-lg text-gray-700 font-bold" },
                                     firebaseInitialized ? 
                                         React.createElement('span', null,
-                                            'みんなでいっしょにあそべるよ〜！', React.createElement('br'),
-                                            React.createElement('span', { className: "text-green-600 font-bold text-xl" }, '✨ リアルタイムきょうどうさぎょう ✨')
+                                            React.createElement('span', { className: "text-2xl" }, '🌈 '),
+                                            'リアルタイムきょうどうさぎょう',
+                                            React.createElement('span', { className: "text-2xl" }, ' 🌈'),
+                                            React.createElement('br'),
+                                            React.createElement('span', { className: "text-green-600 text-xl" }, 
+                                                '✨ みんなでいっしょにあそぼう ✨'
+                                            )
                                         ) :
                                         React.createElement('span', null,
-                                            'データはブラウザにほぞんされるよ〜', React.createElement('br'),
-                                            React.createElement('span', { className: "text-pink-600 font-bold" }, 'あんしんしてつかってね〜 (｡･ω･｡)')
+                                            'データはブラウザにほぞん💾',
+                                            React.createElement('br'),
+                                            React.createElement('span', { className: "text-pink-600" }, 
+                                                'あんしんしてつかってね〜♪'
+                                            )
                                         )
                                 )
                             )
@@ -534,34 +591,46 @@
                         React.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-10 max-w-4xl mx-auto" },
                             React.createElement('button', {
                                 onClick: () => setCurrentView('vote'),
-                                className: "yuru-card p-12 hover:scale-105 transition-all duration-300 group relative overflow-hidden"
+                                className: "cute-card stamp-shadow p-12 hover:scale-105 transition-all duration-300 group relative overflow-visible"
                             },
                                 React.createElement('div', { 
-                                    className: "absolute -top-4 -right-4 text-8xl opacity-20 group-hover:scale-150 transition-transform duration-500" 
+                                    className: "absolute -top-8 -right-8 text-6xl transform rotate-12" 
                                 }, '🎯'),
                                 React.createElement('div', { className: "relative z-10" },
-                                    React.createElement('div', { className: "text-7xl mb-4 group-hover:wobble" }, '🗳️'),
-                                    React.createElement('h2', { className: "text-3xl font-bold mb-3 text-gray-800 yuru-text" }, 
-                                        'とうひょうする〜'
+                                    React.createElement('div', { className: "text-7xl mb-4 group-hover:bounce-rotate" }, '🗳️'),
+                                    React.createElement('h2', { className: "text-3xl font-black mb-3 text-pink-600 sparkle-container" }, 
+                                        React.createElement('span', { className: "inline-block transform rotate-[-5deg]" }, 'とうひょう'),
+                                        React.createElement('br'),
+                                        React.createElement('span', { className: "inline-block transform rotate-[3deg]" }, 'する〜♪')
                                     ),
-                                    React.createElement('p', { className: "text-xl text-gray-700" }, 'がっきょくをひょうかしよう！'),
-                                    React.createElement('p', { className: "text-2xl mt-2" }, '(´∀｀)σ')
+                                    React.createElement('div', { className: "flex justify-center gap-2 text-2xl mt-4" },
+                                        React.createElement('span', null, '💖'),
+                                        React.createElement('span', null, '💚'),
+                                        React.createElement('span', null, '💛'),
+                                        React.createElement('span', null, '💙')
+                                    )
                                 )
                             ),
                             React.createElement('button', {
                                 onClick: () => setCurrentView('results'),
-                                className: "yuru-card p-12 hover:scale-105 transition-all duration-300 group relative overflow-hidden"
+                                className: "cute-card stamp-shadow p-12 hover:scale-105 transition-all duration-300 group relative overflow-visible"
                             },
                                 React.createElement('div', { 
-                                    className: "absolute -bottom-4 -left-4 text-8xl opacity-20 group-hover:scale-150 transition-transform duration-500" 
+                                    className: "absolute -bottom-8 -left-8 text-6xl transform rotate-[-15deg]" 
                                 }, '📊'),
                                 React.createElement('div', { className: "relative z-10" },
-                                    React.createElement('div', { className: "text-7xl mb-4 group-hover:wobble" }, '🏆'),
-                                    React.createElement('h2', { className: "text-3xl font-bold mb-3 text-gray-800 yuru-text" }, 
-                                        'けっかをみる〜'
+                                    React.createElement('div', { className: "text-7xl mb-4 group-hover:bounce-rotate" }, '🏆'),
+                                    React.createElement('h2', { className: "text-3xl font-black mb-3 text-green-600 sparkle-container" }, 
+                                        React.createElement('span', { className: "inline-block transform rotate-[5deg]" }, 'けっかを'),
+                                        React.createElement('br'),
+                                        React.createElement('span', { className: "inline-block transform rotate-[-3deg]" }, 'みる〜★')
                                     ),
-                                    React.createElement('p', { className: "text-xl text-gray-700" }, 'みんなのひょうかをチェック！'),
-                                    React.createElement('p', { className: "text-2xl mt-2" }, '(｡◕‿◕｡)')
+                                    React.createElement('div', { className: "flex justify-center gap-2 text-2xl mt-4" },
+                                        React.createElement('span', null, '🌟'),
+                                        React.createElement('span', null, '✨'),
+                                        React.createElement('span', null, '🎉'),
+                                        React.createElement('span', null, '🎊')
+                                    )
                                 )
                             )
                         )
