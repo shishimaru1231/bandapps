@@ -424,10 +424,18 @@
                 e.dataTransfer.effectAllowed = 'move';
             };
 
-            const handleDragOver = (e, index) => {
+            const handleDragOver = (e) => {
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
+            };
+            
+            const handleDragEnter = (e, index) => {
+                e.preventDefault();
                 setDragOverIndex(index);
+            };
+            
+            const handleDragLeave = (e) => {
+                e.preventDefault();
             };
 
             const handleDrop = (e, dropIndex) => {
@@ -469,6 +477,11 @@
                 }
 
                 setDraggedSong(null);
+            };
+            
+            const handleDragEnd = (e) => {
+                setDraggedSong(null);
+                setDragOverIndex(null);
             };
 
             // 曲をセットリストから削除
@@ -661,7 +674,8 @@
                                                 key: song.id,
                                                 className: `song-card p-3 mb-3 ${isInSetlist ? 'opacity-50' : ''}`,
                                                 draggable: !isInSetlist,
-                                                onDragStart: (e) => handleDragStart(e, song)
+                                                onDragStart: (e) => handleDragStart(e, song),
+                                                onDragEnd: handleDragEnd
                                             },
                                                 React.createElement('div', { className: "flex justify-between items-start mb-1" },
                                                     React.createElement('h4', { className: "font-bold text-sm" }, song.title),
@@ -695,12 +709,7 @@
                                     ),
                                     React.createElement('div', { 
                                         className: "setlist-area",
-                                        onDragOver: (e) => {
-                                            e.preventDefault();
-                                            if (currentSetlist && (!currentSetlist.songs || currentSetlist.songs.length === 0)) {
-                                                setDragOverIndex(0);
-                                            }
-                                        },
+                                        onDragOver: handleDragOver,
                                         onDrop: handleDropToSetlist
                                     },
                                         currentSetlist ? (
@@ -717,7 +726,9 @@
                                                             className: `song-card p-3 mb-3 ${dragOverIndex === index ? 'drag-over' : ''}`,
                                                             draggable: true,
                                                             onDragStart: (e) => handleDragStart(e, song),
-                                                            onDragOver: (e) => handleDragOver(e, index),
+                                                            onDragOver: handleDragOver,
+                                                            onDragEnter: (e) => handleDragEnter(e, index),
+                                                            onDragLeave: handleDragLeave,
                                                             onDrop: (e) => handleDrop(e, index)
                                                         },
                                                             React.createElement('div', { className: "flex items-start gap-3" },
