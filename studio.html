@@ -3,105 +3,724 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>スタジオ練習管理</title>
+    <title>練習管理 - バンド活動管理</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎸</text></svg>">
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
+        
+        body { 
+            font-family: 'M PLUS Rounded 1c', sans-serif;
             background: #1a1a2e;
-            color: white;
-            font-family: Arial, sans-serif;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 119, 232, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 232, 119, 0.2) 0%, transparent 50%);
+            color: #ffffff;
+            min-height: 100vh;
+            margin: 0;
         }
-        h1 {
-            text-align: center;
-            color: #00d9ff;
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         }
-        .box {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
-            background: rgba(255,255,255,0.1);
+        
+        .practice-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .practice-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        .menu-item {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 8px;
+            padding: 8px 16px;
+            margin: 4px;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-item:hover {
+            background: rgba(139, 92, 246, 0.2);
+            transform: scale(1.05);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
         }
-        button {
-            background: #00d9ff;
-            color: black;
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #667eea, #f093fb);
+            border-radius: 10px;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-scheduled {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+        
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        
+        .status-cancelled {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        .tab-button {
+            padding: 8px 20px;
+            background: transparent;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            color: #9ca3af;
             cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
         }
-        input, textarea {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #00d9ff;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 5px;
-            box-sizing: border-box;
+        
+        .tab-button.active {
+            color: #ffffff;
+            border-bottom-color: #8b5cf6;
         }
-        .item {
-            background: rgba(0,0,0,0.3);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border-left: 4px solid #00d9ff;
+        
+        .tab-button:hover {
+            color: #ffffff;
         }
     </style>
 </head>
 <body>
-    <h1>スタジオ練習管理</h1>
-    <div class="box">
-        <h2>新規記録</h2>
-        <input type="date" id="date">
-        <input type="text" id="place" placeholder="場所">
-        <textarea id="memo" placeholder="メモ" rows="3"></textarea>
-        <button onclick="add()">保存</button>
-    </div>
-    <div class="box">
-        <h2>履歴</h2>
-        <div id="list"></div>
-    </div>
-    <script>
-        function add() {
-            var d = document.getElementById('date').value;
-            var p = document.getElementById('place').value;
-            var m = document.getElementById('memo').value;
-            if (!d || !p || !m) {
-                alert('すべて入力してください');
-                return;
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        (() => {
+            const { useState, useEffect, useRef } = React;
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
+                authDomain: "band-apps.firebaseapp.com",
+                databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
+                projectId: "band-apps",
+                storageBucket: "band-apps.firebasestorage.app",
+                messagingSenderId: "238355659055",
+                appId: "1:238355659055:web:d07caffb8b2fd6112689da",
+                measurementId: "G-T5ZYHTSS3L"
+            };
+
+            let database = null;
+            try {
+                firebase.initializeApp(firebaseConfig);
+                database = firebase.database();
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
             }
-            var data = JSON.parse(localStorage.getItem('studio') || '[]');
-            data.unshift({date: d, place: p, memo: m, id: Date.now()});
-            localStorage.setItem('studio', JSON.stringify(data));
-            show();
-            document.getElementById('date').value = '';
-            document.getElementById('place').value = '';
-            document.getElementById('memo').value = '';
-        }
-        function del(id) {
-            if (!confirm('削除しますか？')) return;
-            var data = JSON.parse(localStorage.getItem('studio') || '[]');
-            data = data.filter(function(item) { return item.id !== id; });
-            localStorage.setItem('studio', JSON.stringify(data));
-            show();
-        }
-        function show() {
-            var data = JSON.parse(localStorage.getItem('studio') || '[]');
-            var html = '';
-            for (var i = 0; i < data.length; i++) {
-                html += '<div class="item">';
-                html += data[i].date + ' - ' + data[i].place + '<br>';
-                html += data[i].memo + '<br>';
-                html += '<button onclick="del(' + data[i].id + ')">削除</button>';
-                html += '</div>';
-            }
-            document.getElementById('list').innerHTML = html || '<p>記録がありません</p>';
-        }
-        show();
+
+            const defaultMenuItems = [
+                { id: 1, name: "基礎練習", category: "basic" },
+                { id: 2, name: "曲合わせ", category: "song" },
+                { id: 3, name: "パート練習", category: "part" },
+                { id: 4, name: "リズム練習", category: "rhythm" },
+                { id: 5, name: "アレンジ確認", category: "arrange" },
+                { id: 6, name: "録音", category: "recording" },
+                { id: 7, name: "ミーティング", category: "meeting" },
+                { id: 8, name: "機材セッティング", category: "setup" }
+            ];
+
+            const PracticeManager = () => {
+                const [practices, setPractices] = useState([]);
+                const [menuItems, setMenuItems] = useState(defaultMenuItems);
+                const [activeTab, setActiveTab] = useState('schedule');
+                const [showNewPracticeForm, setShowNewPracticeForm] = useState(false);
+                const [showNewMenuForm, setShowNewMenuForm] = useState(false);
+                const [selectedPractice, setSelectedPractice] = useState(null);
+                const [newPractice, setNewPractice] = useState({
+                    date: '',
+                    startTime: '',
+                    endTime: '',
+                    location: '',
+                    menuItems: [],
+                    status: 'scheduled'
+                });
+                const [newMenuItem, setNewMenuItem] = useState({ name: '', category: 'basic' });
+                const [practiceRecord, setPracticeRecord] = useState({
+                    notes: '',
+                    achievements: '',
+                    nextGoals: ''
+                });
+
+                useEffect(() => {
+                    if (!database) return;
+                    
+                    const practicesRef = database.ref('practices');
+                    practicesRef.on('value', (snapshot) => {
+                        const data = snapshot.val() || {};
+                        const practicesArray = Object.entries(data).map(([id, practice]) => ({
+                            id,
+                            ...practice
+                        })).sort((a, b) => new Date(b.date) - new Date(a.date));
+                        setPractices(practicesArray);
+                    });
+
+                    const menuRef = database.ref('practiceMenuItems');
+                    menuRef.on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            const menuArray = Object.entries(data).map(([id, item]) => ({
+                                id,
+                                ...item
+                            }));
+                            setMenuItems(menuArray);
+                        } else {
+                            // 初回はデフォルトメニューを保存
+                            defaultMenuItems.forEach(item => {
+                                menuRef.push(item);
+                            });
+                        }
+                    });
+
+                    return () => {
+                        practicesRef.off();
+                        menuRef.off();
+                    };
+                }, []);
+
+                const addPractice = () => {
+                    if (!newPractice.date || !newPractice.startTime) return;
+                    
+                    const practice = {
+                        ...newPractice,
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    if (database) {
+                        database.ref('practices').push(practice);
+                    }
+                    
+                    setNewPractice({
+                        date: '',
+                        startTime: '',
+                        endTime: '',
+                        location: '',
+                        menuItems: [],
+                        status: 'scheduled'
+                    });
+                    setShowNewPracticeForm(false);
+                };
+
+                const updatePracticeStatus = (practiceId, status) => {
+                    if (database) {
+                        database.ref(`practices/${practiceId}/status`).set(status);
+                    }
+                };
+
+                const savePracticeRecord = (practiceId) => {
+                    if (database && practiceRecord.notes) {
+                        database.ref(`practices/${practiceId}/record`).set({
+                            ...practiceRecord,
+                            recordedAt: new Date().toISOString()
+                        });
+                        database.ref(`practices/${practiceId}/status`).set('completed');
+                        
+                        setPracticeRecord({ notes: '', achievements: '', nextGoals: '' });
+                        setSelectedPractice(null);
+                    }
+                };
+
+                const deletePractice = (practiceId) => {
+                    if (database && confirm('この練習予定を削除しますか？')) {
+                        database.ref(`practices/${practiceId}`).remove();
+                    }
+                };
+
+                const addMenuItem = () => {
+                    if (!newMenuItem.name) return;
+                    
+                    if (database) {
+                        database.ref('practiceMenuItems').push(newMenuItem);
+                    }
+                    
+                    setNewMenuItem({ name: '', category: 'basic' });
+                    setShowNewMenuForm(false);
+                };
+
+                const deleteMenuItem = (itemId) => {
+                    if (database && confirm('このメニュー項目を削除しますか？')) {
+                        database.ref(`practiceMenuItems/${itemId}`).remove();
+                    }
+                };
+
+                const toggleMenuItem = (itemId) => {
+                    const updatedItems = newPractice.menuItems.includes(itemId)
+                        ? newPractice.menuItems.filter(id => id !== itemId)
+                        : [...newPractice.menuItems, itemId];
+                    
+                    setNewPractice({ ...newPractice, menuItems: updatedItems });
+                };
+
+                const upcomingPractices = practices.filter(p => 
+                    p.status === 'scheduled' && new Date(p.date) >= new Date()
+                );
+                
+                const pastPractices = practices.filter(p => 
+                    p.status === 'completed' || new Date(p.date) < new Date()
+                );
+
+                return (
+                    <div className="min-h-screen p-4">
+                        <header className="glass-card mb-6 p-6">
+                            <div className="flex justify-between items-center">
+                                <h1 className="text-3xl font-bold gradient-text">
+                                    🎵 練習管理
+                                </h1>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowNewPracticeForm(true)}
+                                        className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+                                    >
+                                        新規練習予定
+                                    </button>
+                                    <a
+                                        href="home.html"
+                                        className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-medium transition-colors"
+                                    >
+                                        ホームに戻る
+                                    </a>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div className="glass-card p-6 mb-6">
+                            <div className="flex gap-4 mb-6 border-b border-gray-700">
+                                <button
+                                    className={`tab-button ${activeTab === 'schedule' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('schedule')}
+                                >
+                                    練習予定
+                                </button>
+                                <button
+                                    className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('history')}
+                                >
+                                    練習履歴
+                                </button>
+                                <button
+                                    className={`tab-button ${activeTab === 'menu' ? 'active' : ''}`}
+                                    onClick={() => setActiveTab('menu')}
+                                >
+                                    練習メニュー管理
+                                </button>
+                            </div>
+
+                            {activeTab === 'schedule' && (
+                                <div>
+                                    <h2 className="text-xl font-bold mb-4">今後の練習予定</h2>
+                                    {upcomingPractices.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {upcomingPractices.map(practice => (
+                                                <div key={practice.id} className="practice-card">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div>
+                                                            <h3 className="text-lg font-medium mb-1">
+                                                                {new Date(practice.date).toLocaleDateString('ja-JP', {
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric',
+                                                                    weekday: 'short'
+                                                                })}
+                                                            </h3>
+                                                            <p className="text-gray-400">
+                                                                {practice.startTime} - {practice.endTime || '未定'}
+                                                            </p>
+                                                            {practice.location && (
+                                                                <p className="text-gray-400">
+                                                                    📍 {practice.location}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <span className="status-badge status-scheduled">
+                                                                予定
+                                                            </span>
+                                                            <button
+                                                                onClick={() => deletePractice(practice.id)}
+                                                                className="text-red-400 hover:text-red-500 p-1"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {practice.menuItems && practice.menuItems.length > 0 && (
+                                                        <div className="mb-3">
+                                                            <p className="text-sm text-gray-400 mb-2">練習メニュー:</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {practice.menuItems.map(itemId => {
+                                                                    const menuItem = menuItems.find(m => m.id === itemId);
+                                                                    return menuItem ? (
+                                                                        <span key={itemId} className="menu-item">
+                                                                            {menuItem.name}
+                                                                        </span>
+                                                                    ) : null;
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedPractice(practice);
+                                                            setPracticeRecord({
+                                                                notes: practice.record?.notes || '',
+                                                                achievements: practice.record?.achievements || '',
+                                                                nextGoals: practice.record?.nextGoals || ''
+                                                            });
+                                                        }}
+                                                        className="text-purple-400 hover:text-purple-500 text-sm"
+                                                    >
+                                                        記録を追加 →
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-center text-gray-400 py-8">
+                                            予定されている練習はありません
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'history' && (
+                                <div>
+                                    <h2 className="text-xl font-bold mb-4">練習履歴</h2>
+                                    {pastPractices.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {pastPractices.map(practice => (
+                                                <div key={practice.id} className="practice-card">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div>
+                                                            <h3 className="text-lg font-medium mb-1">
+                                                                {new Date(practice.date).toLocaleDateString('ja-JP', {
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric',
+                                                                    weekday: 'short'
+                                                                })}
+                                                            </h3>
+                                                            <p className="text-gray-400">
+                                                                {practice.startTime} - {practice.endTime || '未定'}
+                                                            </p>
+                                                        </div>
+                                                        <span className={`status-badge status-${practice.status}`}>
+                                                            {practice.status === 'completed' ? '完了' : 'キャンセル'}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {practice.record && (
+                                                        <div className="mt-3 p-3 bg-black/20 rounded-lg">
+                                                            {practice.record.notes && (
+                                                                <div className="mb-2">
+                                                                    <p className="text-sm font-medium text-gray-400">練習内容:</p>
+                                                                    <p className="text-sm">{practice.record.notes}</p>
+                                                                </div>
+                                                            )}
+                                                            {practice.record.achievements && (
+                                                                <div className="mb-2">
+                                                                    <p className="text-sm font-medium text-gray-400">成果:</p>
+                                                                    <p className="text-sm">{practice.record.achievements}</p>
+                                                                </div>
+                                                            )}
+                                                            {practice.record.nextGoals && (
+                                                                <div>
+                                                                    <p className="text-sm font-medium text-gray-400">次回の目標:</p>
+                                                                    <p className="text-sm">{practice.record.nextGoals}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-center text-gray-400 py-8">
+                                            練習履歴はまだありません
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'menu' && (
+                                <div>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h2 className="text-xl font-bold">練習メニュー一覧</h2>
+                                        <button
+                                            onClick={() => setShowNewMenuForm(true)}
+                                            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            メニュー追加
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {menuItems.map(item => (
+                                            <div key={item.id} className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
+                                                <div>
+                                                    <p className="font-medium">{item.name}</p>
+                                                    <p className="text-sm text-gray-400">{item.category}</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => deleteMenuItem(item.id)}
+                                                    className="text-red-400 hover:text-red-500 p-1"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 新規練習予定フォーム */}
+                        {showNewPracticeForm && (
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                                <div className="glass-card p-6 max-w-md w-full">
+                                    <h3 className="text-xl font-bold mb-4">新規練習予定</h3>
+                                    
+                                    <input
+                                        type="date"
+                                        value={newPractice.date}
+                                        onChange={(e) => setNewPractice({...newPractice, date: e.target.value})}
+                                        className="w-full mb-3 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    
+                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <input
+                                            type="time"
+                                            placeholder="開始時間"
+                                            value={newPractice.startTime}
+                                            onChange={(e) => setNewPractice({...newPractice, startTime: e.target.value})}
+                                            className="px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                        <input
+                                            type="time"
+                                            placeholder="終了時間"
+                                            value={newPractice.endTime}
+                                            onChange={(e) => setNewPractice({...newPractice, endTime: e.target.value})}
+                                            className="px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    
+                                    <input
+                                        type="text"
+                                        placeholder="場所"
+                                        value={newPractice.location}
+                                        onChange={(e) => setNewPractice({...newPractice, location: e.target.value})}
+                                        className="w-full mb-3 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    
+                                    <div className="mb-4">
+                                        <p className="text-sm text-gray-400 mb-2">練習メニュー:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {menuItems.map(item => (
+                                                <button
+                                                    key={item.id}
+                                                    onClick={() => toggleMenuItem(item.id)}
+                                                    className={`menu-item ${newPractice.menuItems.includes(item.id) ? 'bg-purple-600/30' : ''}`}
+                                                >
+                                                    {item.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={addPractice}
+                                            className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium"
+                                        >
+                                            追加
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowNewPracticeForm(false);
+                                                setNewPractice({
+                                                    date: '',
+                                                    startTime: '',
+                                                    endTime: '',
+                                                    location: '',
+                                                    menuItems: [],
+                                                    status: 'scheduled'
+                                                });
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-medium"
+                                        >
+                                            キャンセル
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 練習記録フォーム */}
+                        {selectedPractice && (
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                                <div className="glass-card p-6 max-w-md w-full">
+                                    <h3 className="text-xl font-bold mb-4">練習記録</h3>
+                                    <p className="text-gray-400 mb-4">
+                                        {new Date(selectedPractice.date).toLocaleDateString('ja-JP')}の練習
+                                    </p>
+                                    
+                                    <textarea
+                                        placeholder="練習内容..."
+                                        value={practiceRecord.notes}
+                                        onChange={(e) => setPracticeRecord({...practiceRecord, notes: e.target.value})}
+                                        className="w-full mb-3 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 h-24"
+                                    />
+                                    
+                                    <textarea
+                                        placeholder="成果・できたこと..."
+                                        value={practiceRecord.achievements}
+                                        onChange={(e) => setPracticeRecord({...practiceRecord, achievements: e.target.value})}
+                                        className="w-full mb-3 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 h-20"
+                                    />
+                                    
+                                    <textarea
+                                        placeholder="次回の目標..."
+                                        value={practiceRecord.nextGoals}
+                                        onChange={(e) => setPracticeRecord({...practiceRecord, nextGoals: e.target.value})}
+                                        className="w-full mb-4 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 h-20"
+                                    />
+                                    
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => savePracticeRecord(selectedPractice.id)}
+                                            className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium"
+                                        >
+                                            保存
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedPractice(null);
+                                                setPracticeRecord({ notes: '', achievements: '', nextGoals: '' });
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-medium"
+                                        >
+                                            キャンセル
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* メニュー追加フォーム */}
+                        {showNewMenuForm && (
+                            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                                <div className="glass-card p-6 max-w-md w-full">
+                                    <h3 className="text-xl font-bold mb-4">新規練習メニュー</h3>
+                                    
+                                    <input
+                                        type="text"
+                                        placeholder="メニュー名"
+                                        value={newMenuItem.name}
+                                        onChange={(e) => setNewMenuItem({...newMenuItem, name: e.target.value})}
+                                        className="w-full mb-3 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    
+                                    <select
+                                        value={newMenuItem.category}
+                                        onChange={(e) => setNewMenuItem({...newMenuItem, category: e.target.value})}
+                                        className="w-full mb-4 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    >
+                                        <option value="basic">基礎練習</option>
+                                        <option value="song">曲練習</option>
+                                        <option value="part">パート練習</option>
+                                        <option value="rhythm">リズム練習</option>
+                                        <option value="arrange">アレンジ</option>
+                                        <option value="recording">録音</option>
+                                        <option value="meeting">ミーティング</option>
+                                        <option value="setup">セッティング</option>
+                                        <option value="other">その他</option>
+                                    </select>
+                                    
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={addMenuItem}
+                                            className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium"
+                                        >
+                                            追加
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowNewMenuForm(false);
+                                                setNewMenuItem({ name: '', category: 'basic' });
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg font-medium"
+                                        >
+                                            キャンセル
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<PracticeManager />);
+        })();
     </script>
 </body>
 </html>
