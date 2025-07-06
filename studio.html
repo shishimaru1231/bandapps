@@ -7,13 +7,9 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎸</text></svg>">
     
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
@@ -189,21 +185,6 @@
             background: rgba(255, 255, 255, 0.2);
         }
         
-        .auth-container {
-            max-width: 400px;
-            margin: 100px auto;
-            padding: 20px;
-        }
-        
-        .error-message {
-            background: rgba(255, 0, 0, 0.1);
-            border: 1px solid rgba(255, 0, 0, 0.3);
-            color: #ff6b6b;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-        
         .loading-spinner {
             display: inline-block;
             width: 20px;
@@ -236,11 +217,8 @@
 <body>
     <div id="root"></div>
     
-    <script type="text/babel" data-type="module">
-        //<![CDATA[
-        const { useState, useEffect, useRef } = React;
-
-        // Firebase設定 - 元の値を復元
+    <script>
+        // Firebase設定
         const firebaseConfig = {
             apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
             authDomain: "band-apps.firebaseapp.com",
@@ -252,692 +230,506 @@
             measurementId: "G-T5ZYHTSS3L"
         };
 
-        // ローカルストレージを使用したモックストレージ
-        const MockStorage = {
-            sessions: JSON.parse(localStorage.getItem('band_sessions') || '{}'),
-            
-            saveSessions() {
-                localStorage.setItem('band_sessions', JSON.stringify(this.sessions));
-            },
-            
-            addSession(session) {
-                const id = Date.now().toString();
-                this.sessions[id] = { ...session, id };
-                this.saveSessions();
-                return id;
-            },
-            
-            updateSession(id, data) {
-                if (this.sessions[id]) {
-                    this.sessions[id] = { ...this.sessions[id], ...data };
-                    this.saveSessions();
-                }
-            },
-            
-            deleteSession(id) {
-                delete this.sessions[id];
-                this.saveSessions();
-            },
-            
-            getSessions() {
-                return Object.values(this.sessions);
-            }
-        };
-
         let database = null;
         let storage = null;
-        let auth = null;
         let isFirebaseEnabled = false;
         
         try {
             firebase.initializeApp(firebaseConfig);
             database = firebase.database();
             storage = firebase.storage();
-            auth = firebase.auth();
             isFirebaseEnabled = true;
         } catch (error) {
             console.error("Firebase initialization error:", error);
-            console.log("ローカルストレージモードで動作します");
         }
 
-        const AudioManager = {
-            MAX_DIRECT_UPLOAD_SIZE: 10 * 1024 * 1024, // 10MB
+        // グローバル状態
+        let currentSession = null;
+        let sessions = [];
+        let audioSources = [];
+
+        // DOM要素を作成するヘルパー関数
+        function createElement(tag, className, text) {
+            const el = document.createElement(tag);
+            if (className) el.className = className;
+            if (text) el.textContent = text;
+            return el;
+        }
+
+        // メイン画面を作成
+        function createMainScreen() {
+            const container = createElement('div', 'min-h-screen p-4');
             
-            SOURCE_TYPE: {
-                FIREBASE: 'firebase',
-                GOOGLE_DRIVE: 'google_drive',
-                YOUTUBE: 'youtube',
-                SOUNDCLOUD: 'soundcloud',
-                EXTERNAL_URL: 'external_url',
-                LOCAL: 'local'
-            },
+            // ヘッダー
+            const header = createElement('div', 'glass-card mb-6 p-6');
+            const headerContent = createElement('div', 'flex justify-between items-center');
             
-            async handleAudioUpload(file, method = 'auto') {
-                if (!isFirebaseEnabled) {
-                    return { needsExternalLink: true };
-                }
-                
-                if (method === 'auto') {
-                    if (file.size <= this.MAX_DIRECT_UPLOAD_SIZE) {
-                        return await this.uploadToFirebase(file);
-                    } else {
-                        return { needsExternalLink: true };
-                    }
-                }
-                
-                if (method === 'firebase') {
-                    if (file.size > 50 * 1024 * 1024) {
-                        throw new Error('ファイルサイズが大きすぎます（最大50MB）');
-                    }
-                    return await this.uploadToFirebase(file);
-                }
-                
-                return { needsExternalLink: true };
-            },
+            const headerLeft = createElement('div');
+            const title = createElement('h1', 'text-3xl font-bold gradient-text mb-2', '🎵 レコーディングスタジオ');
+            headerLeft.appendChild(title);
             
-            async uploadToFirebase(file) {
-                if (!storage) throw new Error('Firebaseストレージが利用できません');
-                
-                const storageRef = storage.ref();
-                const audioRef = storageRef.child(`audio/${Date.now()}_${file.name}`);
-                const snapshot = await audioRef.put(file);
-                const downloadURL = await snapshot.ref.getDownloadURL();
-                
-                return {
-                    type: this.SOURCE_TYPE.FIREBASE,
-                    url: downloadURL,
-                    name: file.name,
-                    size: file.size,
-                    duration: null
-                };
-            },
-            
-            detectSourceType(url) {
-                if (url.includes('drive.google.com')) {
-                    return this.SOURCE_TYPE.GOOGLE_DRIVE;
-                } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
-                    return this.SOURCE_TYPE.YOUTUBE;
-                } else if (url.includes('soundcloud.com')) {
-                    return this.SOURCE_TYPE.SOUNDCLOUD;
-                }
-                return this.SOURCE_TYPE.EXTERNAL_URL;
-            },
-            
-            convertGoogleDriveUrl(shareUrl) {
-                const match = shareUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-                if (match) {
-                    const fileId = match[1];
-                    return `https://drive.google.com/uc?export=download&id=${fileId}`;
-                }
-                return shareUrl;
-            },
-            
-            processExternalLink(url, name) {
-                const sourceType = this.detectSourceType(url);
-                let processedUrl = url;
-                
-                if (sourceType === this.SOURCE_TYPE.GOOGLE_DRIVE) {
-                    processedUrl = this.convertGoogleDriveUrl(url);
-                }
-                
-                return {
-                    type: sourceType,
-                    url: processedUrl,
-                    name: name || this.extractFileName(url),
-                    size: null,
-                    duration: null
-                };
-            },
-            
-            extractFileName(url) {
-                try {
-                    const urlObj = new URL(url);
-                    const pathname = urlObj.pathname;
-                    const parts = pathname.split('/');
-                    return decodeURIComponent(parts[parts.length - 1]) || '外部音源';
-                } catch {
-                    return '外部音源';
-                }
+            if (currentSession) {
+                const sessionName = createElement('p', 'text-xl', '現在のセッション: ' + currentSession.name);
+                headerLeft.appendChild(sessionName);
             }
-        };
-
-        const AuthComponent = ({ onLogin }) => {
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [isLogin, setIsLogin] = useState(true);
-            const [error, setError] = useState('');
-            const [loading, setLoading] = useState(false);
-
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setError('');
-                setLoading(true);
-
-                try {
-                    if (!isFirebaseEnabled) {
-                        onLogin({ email, uid: 'local-user' });
-                        return;
-                    }
-
-                    if (isLogin) {
-                        await auth.signInWithEmailAndPassword(email, password);
-                    } else {
-                        await auth.createUserWithEmailAndPassword(email, password);
-                    }
-                } catch (error) {
-                    setError(error.message);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            return (
-                <div className="auth-container glass-card">
-                    <h2 className="text-2xl font-bold mb-6 text-center gradient-text">
-                        {isLogin ? 'ログイン' : '新規登録'}
-                    </h2>
+            
+            const headerRight = createElement('div', 'flex gap-4');
+            
+            const newSessionBtn = createElement('button', 'btn-primary', '新規セッション');
+            newSessionBtn.onclick = createNewSession;
+            
+            const homeBtn = createElement('a', 'btn-secondary');
+            homeBtn.href = 'home.html';
+            homeBtn.textContent = 'ホームに戻る';
+            homeBtn.style.textDecoration = 'none';
+            homeBtn.style.display = 'inline-block';
+            
+            headerRight.appendChild(newSessionBtn);
+            headerRight.appendChild(homeBtn);
+            
+            headerContent.appendChild(headerLeft);
+            headerContent.appendChild(headerRight);
+            header.appendChild(headerContent);
+            container.appendChild(header);
+            
+            // メインコンテンツ
+            const mainGrid = createElement('div', 'grid grid-cols-1 lg:grid-cols-3 gap-6');
+            
+            // セッションリスト
+            const sessionListCard = createElement('div', 'glass-card p-6');
+            const sessionListTitle = createElement('h2', 'text-xl font-bold mb-4', '過去のセッション');
+            sessionListCard.appendChild(sessionListTitle);
+            
+            const sessionListContainer = createElement('div', 'session-list');
+            sessions.forEach(session => {
+                const sessionItem = createSessionItem(session);
+                sessionListContainer.appendChild(sessionItem);
+            });
+            sessionListCard.appendChild(sessionListContainer);
+            
+            // 音源管理
+            const audioCard = createElement('div', 'glass-card p-6 lg:col-span-2');
+            const audioTitle = createElement('h2', 'text-xl font-bold mb-4', '音源管理');
+            audioCard.appendChild(audioTitle);
+            
+            if (currentSession) {
+                // アップロード方法選択
+                if (isFirebaseEnabled) {
+                    const uploadMethodDiv = createElement('div', 'upload-method-selector');
                     
-                    {error && <div className="error-message">{error}</div>}
+                    const methods = [
+                        { value: 'auto', label: '自動（10MB以下は直接アップロード）' },
+                        { value: 'firebase', label: '常にFirebaseにアップロード' },
+                        { value: 'link', label: '外部リンクを使用' }
+                    ];
                     
-                    <form onSubmit={handleSubmit}>
-                        <input
-                            type="email"
-                            placeholder="メールアドレス"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="input-field"
-                            required
-                        />
+                    methods.forEach(method => {
+                        const label = createElement('label');
+                        const radio = createElement('input');
+                        radio.type = 'radio';
+                        radio.name = 'uploadMethod';
+                        radio.value = method.value;
+                        if (method.value === 'auto') radio.checked = true;
                         
-                        <input
-                            type="password"
-                            placeholder="パスワード"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="input-field"
-                            required
-                            minLength="6"
-                        />
-                        
-                        <button 
-                            type="submit" 
-                            className="btn-primary w-full mb-4"
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <span className="loading-spinner"></span>
-                            ) : (
-                                isLogin ? 'ログイン' : '登録'
-                            )}
-                        </button>
-                    </form>
-                    
-                    <p className="text-center text-sm">
-                        {isLogin ? 'アカウントをお持ちでない方は' : 'すでにアカウントをお持ちの方は'}
-                        <button
-                            onClick={() => setIsLogin(!isLogin)}
-                            className="text-purple-400 hover:text-purple-300 ml-1"
-                        >
-                            {isLogin ? '新規登録' : 'ログイン'}
-                        </button>
-                    </p>
-
-                    {!isFirebaseEnabled && (
-                        <p className="text-center text-sm text-yellow-400 mt-4">
-                            デモモード: ローカルストレージを使用しています
-                        </p>
-                    )}
-                </div>
-            );
-        };
-
-        const StudioApp = () => {
-            const [user, setUser] = useState(null);
-            const [sessions, setSessions] = useState([]);
-            const [currentSession, setCurrentSession] = useState(null);
-            const [audioSources, setAudioSources] = useState([]);
-            const [uploadMethod, setUploadMethod] = useState('auto');
-            const [showLinkModal, setShowLinkModal] = useState(false);
-            const [externalLink, setExternalLink] = useState('');
-            const [externalLinkName, setExternalLinkName] = useState('');
-            const [uploading, setUploading] = useState(false);
-            const [dragOver, setDragOver] = useState(false);
-            const fileInputRef = useRef(null);
-
-            useEffect(() => {
-                if (isFirebaseEnabled && auth) {
-                    const unsubscribe = auth.onAuthStateChanged((user) => {
-                        setUser(user);
+                        label.appendChild(radio);
+                        label.appendChild(document.createTextNode(' ' + method.label));
+                        uploadMethodDiv.appendChild(label);
                     });
-                    return () => unsubscribe();
-                } else {
-                    const localUser = localStorage.getItem('local_user');
-                    if (localUser) {
-                        setUser(JSON.parse(localUser));
-                    }
-                }
-            }, []);
-
-            useEffect(() => {
-                if (!user) return;
-
-                if (isFirebaseEnabled && database) {
-                    const userSessionsRef = database.ref(`users/${user.uid}/sessions`);
-                    userSessionsRef.on('value', (snapshot) => {
-                        const data = snapshot.val() || {};
-                        const sessionsArray = Object.entries(data).map(([id, session]) => ({
-                            id,
-                            ...session
-                        }));
-                        setSessions(sessionsArray.sort((a, b) => new Date(b.date) - new Date(a.date)));
-                    });
-
-                    return () => userSessionsRef.off();
-                } else {
-                    const loadSessions = () => {
-                        const sessionsArray = MockStorage.getSessions();
-                        setSessions(sessionsArray.sort((a, b) => new Date(b.date) - new Date(a.date)));
-                    };
-                    loadSessions();
                     
-                    window.addEventListener('storage', loadSessions);
-                    return () => window.removeEventListener('storage', loadSessions);
+                    audioCard.appendChild(uploadMethodDiv);
                 }
-            }, [user]);
-
-            const handleLogin = (userData) => {
-                if (!isFirebaseEnabled) {
-                    localStorage.setItem('local_user', JSON.stringify(userData));
-                    setUser(userData);
+                
+                // ドロップゾーン
+                const dropZone = createElement('div', 'drop-zone');
+                const dropText = createElement('p', 'text-lg mb-2', '音声ファイルをドラッグ&ドロップ');
+                const orText = createElement('p', 'text-sm text-gray-400 mb-4', 'または');
+                const buttonContainer = createElement('div', 'flex gap-4 justify-center');
+                
+                if (isFirebaseEnabled) {
+                    const fileInput = createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = 'audio/*';
+                    fileInput.multiple = true;
+                    fileInput.style.display = 'none';
+                    fileInput.id = 'fileInput';
+                    fileInput.onchange = handleFileInput;
+                    
+                    const fileBtn = createElement('button', 'btn-primary', 'ファイルを選択');
+                    fileBtn.onclick = () => fileInput.click();
+                    
+                    dropZone.appendChild(fileInput);
+                    buttonContainer.appendChild(fileBtn);
                 }
-            };
-
-            const handleLogout = () => {
-                if (isFirebaseEnabled && auth) {
-                    auth.signOut();
-                } else {
-                    localStorage.removeItem('local_user');
-                    setUser(null);
-                }
-            };
-
-            const createNewSession = () => {
-                const newSession = {
-                    name: `セッション ${new Date().toLocaleDateString('ja-JP')}`,
-                    date: new Date().toISOString(),
-                    recordings: []
+                
+                const linkBtn = createElement('button', 'btn-primary', '外部リンクを追加');
+                linkBtn.onclick = showLinkModal;
+                buttonContainer.appendChild(linkBtn);
+                
+                dropZone.appendChild(dropText);
+                dropZone.appendChild(orText);
+                dropZone.appendChild(buttonContainer);
+                
+                dropZone.ondrop = handleDrop;
+                dropZone.ondragover = (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('drag-over');
+                };
+                dropZone.ondragleave = () => {
+                    dropZone.classList.remove('drag-over');
                 };
                 
-                if (isFirebaseEnabled && database) {
-                    const newRef = database.ref(`users/${user.uid}/sessions`).push();
-                    newRef.set(newSession);
-                    setCurrentSession({ id: newRef.key, ...newSession });
-                } else {
-                    const id = MockStorage.addSession(newSession);
-                    setCurrentSession({ id, ...newSession });
-                    const sessionsArray = MockStorage.getSessions();
-                    setSessions(sessionsArray.sort((a, b) => new Date(b.date) - new Date(a.date)));
-                }
-                setAudioSources([]);
-            };
-
-            const handleDrop = async (e) => {
-                e.preventDefault();
-                setDragOver(false);
+                audioCard.appendChild(dropZone);
                 
-                const files = Array.from(e.dataTransfer.files);
-                await handleFiles(files);
-            };
+                // 音源リスト
+                const audioListTitle = createElement('h3', 'text-lg font-semibold mb-3 mt-6', '音源リスト');
+                audioCard.appendChild(audioListTitle);
+                
+                const audioListContainer = createElement('div');
+                if (audioSources.length === 0) {
+                    const noAudio = createElement('p', 'text-gray-400', 'まだ音源がありません');
+                    audioListContainer.appendChild(noAudio);
+                } else {
+                    audioSources.forEach((source, index) => {
+                        const audioItem = createAudioItem(source, index);
+                        audioListContainer.appendChild(audioItem);
+                    });
+                }
+                audioCard.appendChild(audioListContainer);
+            } else {
+                const noSession = createElement('p', 'text-center text-gray-400 py-8', 'セッションを選択または作成してください');
+                audioCard.appendChild(noSession);
+            }
+            
+            mainGrid.appendChild(sessionListCard);
+            mainGrid.appendChild(audioCard);
+            container.appendChild(mainGrid);
+            
+            return container;
+        }
 
-            const handleFileInput = async (e) => {
-                const files = Array.from(e.target.files);
-                await handleFiles(files);
+        // セッションアイテムを作成
+        function createSessionItem(session) {
+            const item = createElement('div', 'session-item' + (currentSession && currentSession.id === session.id ? ' border-2 border-purple-500' : ''));
+            
+            const content = createElement('div');
+            content.style.cursor = 'pointer';
+            content.onclick = () => loadSession(session);
+            
+            const name = createElement('p', 'font-medium', session.name);
+            const date = createElement('p', 'text-sm text-gray-400', new Date(session.date).toLocaleDateString('ja-JP'));
+            const count = createElement('p', 'text-sm text-gray-400', (session.recordings || []).length + '個の録音');
+            
+            content.appendChild(name);
+            content.appendChild(date);
+            content.appendChild(count);
+            
+            const deleteBtn = createElement('button', 'text-red-400 hover:text-red-300 text-sm mt-2', '削除');
+            deleteBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteSession(session.id);
             };
+            
+            item.appendChild(content);
+            item.appendChild(deleteBtn);
+            
+            return item;
+        }
 
-            const handleFiles = async (files) => {
-                for (const file of files) {
-                    if (file.type.startsWith('audio/')) {
-                        setUploading(true);
-                        try {
-                            const result = await AudioManager.handleAudioUpload(file, uploadMethod);
-                            
-                            if (result.needsExternalLink) {
-                                alert(`ファイル「${file.name}」は${(file.size / 1024 / 1024).toFixed(1)}MBです。外部リンクを使用してください。`);
-                                setShowLinkModal(true);
-                            } else {
-                                setAudioSources(prev => [...prev, result]);
-                                saveToSession(result);
-                            }
-                        } catch (error) {
-                            console.error('Upload error:', error);
-                            alert('アップロードエラー: ' + error.message);
-                        } finally {
-                            setUploading(false);
+        // 音源アイテムを作成
+        function createAudioItem(source, index) {
+            const item = createElement('div', 'audio-source-item');
+            
+            const info = createElement('div');
+            const name = createElement('p', 'font-medium', source.name);
+            const type = createElement('p', 'text-sm text-gray-400');
+            
+            if (source.type === 'firebase') {
+                type.textContent = 'Firebase (' + (source.size / 1024 / 1024).toFixed(1) + 'MB)';
+            } else {
+                type.textContent = source.type.replace('_', ' ');
+            }
+            
+            info.appendChild(name);
+            info.appendChild(type);
+            
+            const actions = createElement('div', 'flex gap-2');
+            
+            if (source.url) {
+                const playLink = createElement('a', 'text-purple-400 hover:text-purple-300', '再生');
+                playLink.href = source.url;
+                playLink.target = '_blank';
+                playLink.rel = 'noopener noreferrer';
+                actions.appendChild(playLink);
+            }
+            
+            const deleteBtn = createElement('button', 'text-red-400 hover:text-red-300', '削除');
+            deleteBtn.onclick = () => deleteAudioSource(index);
+            actions.appendChild(deleteBtn);
+            
+            item.appendChild(info);
+            item.appendChild(actions);
+            
+            return item;
+        }
+
+        // 外部リンクモーダルを表示
+        function showLinkModal() {
+            const overlay = createElement('div', 'modal-overlay');
+            overlay.onclick = () => overlay.remove();
+            
+            const modal = createElement('div', 'modal-content glass-card');
+            modal.onclick = (e) => e.stopPropagation();
+            
+            const title = createElement('h3', 'text-xl font-bold mb-4', '外部リンクを追加');
+            
+            const nameInput = createElement('input', 'input-field');
+            nameInput.type = 'text';
+            nameInput.placeholder = '音源の名前';
+            
+            const urlInput = createElement('input', 'input-field');
+            urlInput.type = 'url';
+            urlInput.placeholder = 'URL (Google Drive, YouTube, SoundCloud など)';
+            
+            const info = createElement('div', 'text-sm text-gray-400 mb-4');
+            const infoText = createElement('p', '', '対応サービス:');
+            const list = createElement('ul', 'list-disc list-inside ml-2');
+            
+            const services = ['Google Drive (共有リンク)', 'YouTube', 'SoundCloud', 'その他の直接リンク'];
+            services.forEach(service => {
+                const li = createElement('li', '', service);
+                list.appendChild(li);
+            });
+            
+            info.appendChild(infoText);
+            info.appendChild(list);
+            
+            const actions = createElement('div', 'flex gap-4');
+            
+            const addBtn = createElement('button', 'btn-primary flex-1', '追加');
+            addBtn.onclick = () => {
+                if (urlInput.value) {
+                    handleExternalLinkAdd(urlInput.value, nameInput.value);
+                    overlay.remove();
+                }
+            };
+            
+            const cancelBtn = createElement('button', 'btn-secondary flex-1', 'キャンセル');
+            cancelBtn.onclick = () => overlay.remove();
+            
+            actions.appendChild(addBtn);
+            actions.appendChild(cancelBtn);
+            
+            modal.appendChild(title);
+            modal.appendChild(nameInput);
+            modal.appendChild(urlInput);
+            modal.appendChild(info);
+            modal.appendChild(actions);
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        }
+
+        // イベントハンドラー
+        function createNewSession() {
+            const newSession = {
+                name: 'セッション ' + new Date().toLocaleDateString('ja-JP'),
+                date: new Date().toISOString(),
+                recordings: []
+            };
+            
+            if (isFirebaseEnabled && database) {
+                const newRef = database.ref('sessions').push();
+                newRef.set(newSession);
+                newSession.id = newRef.key;
+            } else {
+                newSession.id = Date.now().toString();
+                const localSessions = JSON.parse(localStorage.getItem('band_sessions') || '{}');
+                localSessions[newSession.id] = newSession;
+                localStorage.setItem('band_sessions', JSON.stringify(localSessions));
+            }
+            
+            currentSession = newSession;
+            audioSources = [];
+            loadSessions();
+        }
+
+        function loadSession(session) {
+            currentSession = session;
+            audioSources = session.recordings || [];
+            renderApp();
+        }
+
+        function deleteSession(sessionId) {
+            if (confirm('このセッションを削除してもよろしいですか？')) {
+                if (isFirebaseEnabled && database) {
+                    database.ref('sessions/' + sessionId).remove();
+                } else {
+                    const localSessions = JSON.parse(localStorage.getItem('band_sessions') || '{}');
+                    delete localSessions[sessionId];
+                    localStorage.setItem('band_sessions', JSON.stringify(localSessions));
+                }
+                
+                if (currentSession && currentSession.id === sessionId) {
+                    currentSession = null;
+                    audioSources = [];
+                }
+                
+                loadSessions();
+            }
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            const files = Array.from(e.dataTransfer.files);
+            handleFiles(files);
+        }
+
+        function handleFileInput(e) {
+            const files = Array.from(e.target.files);
+            handleFiles(files);
+        }
+
+        async function handleFiles(files) {
+            for (const file of files) {
+                if (file.type.startsWith('audio/')) {
+                    try {
+                        const uploadMethod = document.querySelector('input[name="uploadMethod"]:checked');
+                        const method = uploadMethod ? uploadMethod.value : 'auto';
+                        
+                        if (!isFirebaseEnabled || method === 'link') {
+                            alert('ファイル「' + file.name + '」は外部リンクを使用してください。');
+                            showLinkModal();
+                            continue;
                         }
+                        
+                        if (method === 'auto' && file.size > 10 * 1024 * 1024) {
+                            alert('ファイル「' + file.name + '」は' + (file.size / 1024 / 1024).toFixed(1) + 'MBです。外部リンクを使用してください。');
+                            showLinkModal();
+                            continue;
+                        }
+                        
+                        if (method === 'firebase' && file.size > 50 * 1024 * 1024) {
+                            alert('ファイルサイズが大きすぎます（最大50MB）');
+                            continue;
+                        }
+                        
+                        const storageRef = storage.ref();
+                        const audioRef = storageRef.child('audio/' + Date.now() + '_' + file.name);
+                        const snapshot = await audioRef.put(file);
+                        const downloadURL = await snapshot.ref.getDownloadURL();
+                        
+                        const audioData = {
+                            type: 'firebase',
+                            url: downloadURL,
+                            name: file.name,
+                            size: file.size,
+                            duration: null
+                        };
+                        
+                        audioSources.push(audioData);
+                        saveToSession();
+                    } catch (error) {
+                        alert('アップロードエラー: ' + error.message);
                     }
                 }
-            };
-
-            const handleExternalLinkAdd = () => {
-                if (!externalLink) return;
-                
-                const audioData = AudioManager.processExternalLink(externalLink, externalLinkName);
-                setAudioSources(prev => [...prev, audioData]);
-                saveToSession(audioData);
-                
-                setShowLinkModal(false);
-                setExternalLink('');
-                setExternalLinkName('');
-            };
-
-            const saveToSession = (audioData) => {
-                if (!currentSession) return;
-                
-                const recordings = [...(currentSession.recordings || []), audioData];
-                
-                if (isFirebaseEnabled && database) {
-                    database.ref(`users/${user.uid}/sessions/${currentSession.id}/recordings`).set(recordings);
-                } else {
-                    MockStorage.updateSession(currentSession.id, { recordings });
-                }
-            };
-
-            const loadSession = (session) => {
-                setCurrentSession(session);
-                setAudioSources(session.recordings || []);
-            };
-
-            const deleteAudioSource = (index) => {
-                const newSources = audioSources.filter((_, i) => i !== index);
-                setAudioSources(newSources);
-                
-                if (currentSession) {
-                    if (isFirebaseEnabled && database) {
-                        database.ref(`users/${user.uid}/sessions/${currentSession.id}/recordings`).set(newSources);
-                    } else {
-                        MockStorage.updateSession(currentSession.id, { recordings: newSources });
-                    }
-                }
-            };
-
-            const deleteSession = (sessionId) => {
-                if (confirm('このセッションを削除してもよろしいですか？')) {
-                    if (isFirebaseEnabled && database) {
-                        database.ref(`users/${user.uid}/sessions/${sessionId}`).remove();
-                    } else {
-                        MockStorage.deleteSession(sessionId);
-                        setSessions(MockStorage.getSessions());
-                    }
-                    
-                    if (currentSession?.id === sessionId) {
-                        setCurrentSession(null);
-                        setAudioSources([]);
-                    }
-                }
-            };
-
-            if (!user) {
-                return <AuthComponent onLogin={handleLogin} />;
             }
+        }
 
-            return (
-                <div className="min-h-screen p-4">
-                    <header className="glass-card mb-6 p-6">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className="text-3xl font-bold gradient-text mb-2">
-                                    🎵 レコーディングスタジオ
-                                </h1>
-                                {currentSession && (
-                                    <p className="text-xl">
-                                        現在のセッション: {currentSession.name}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={createNewSession}
-                                    className="btn-primary"
-                                >
-                                    新規セッション
-                                </button>
-                                <a
-                                    href="home.html"
-                                    className="btn-secondary"
-                                    style={{ textDecoration: 'none', display: 'inline-block' }}
-                                >
-                                    ホームに戻る
-                                </a>
-                                <button
-                                    onClick={handleLogout}
-                                    className="btn-secondary"
-                                >
-                                    ログアウト
-                                </button>
-                            </div>
-                        </div>
-                    </header>
+        function handleExternalLinkAdd(url, name) {
+            const audioData = {
+                type: detectSourceType(url),
+                url: processUrl(url),
+                name: name || extractFileName(url),
+                size: null,
+                duration: null
+            };
+            
+            audioSources.push(audioData);
+            saveToSession();
+        }
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="glass-card p-6">
-                            <h2 className="text-xl font-bold mb-4">過去のセッション</h2>
-                            <div className="session-list">
-                                {sessions.map(session => (
-                                    <div
-                                        key={session.id}
-                                        className={`session-item ${currentSession?.id === session.id ? 'border-2 border-purple-500' : ''}`}
-                                    >
-                                        <div onClick={() => loadSession(session)}>
-                                            <p className="font-medium">{session.name}</p>
-                                            <p className="text-sm text-gray-400">
-                                                {new Date(session.date).toLocaleDateString('ja-JP')}
-                                            </p>
-                                            <p className="text-sm text-gray-400">
-                                                {(session.recordings || []).length}個の録音
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteSession(session.id);
-                                            }}
-                                            className="text-red-400 hover:text-red-300 text-sm mt-2"
-                                        >
-                                            削除
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+        function detectSourceType(url) {
+            if (url.includes('drive.google.com')) return 'google_drive';
+            if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+            if (url.includes('soundcloud.com')) return 'soundcloud';
+            return 'external_url';
+        }
 
-                        <div className="glass-card p-6 lg:col-span-2">
-                            <h2 className="text-xl font-bold mb-4">音源管理</h2>
-                            
-                            {currentSession ? (
-                                <>
-                                    {isFirebaseEnabled && (
-                                        <div className="upload-method-selector">
-                                            <label>
-                                                <input 
-                                                    type="radio" 
-                                                    value="auto" 
-                                                    checked={uploadMethod === 'auto'}
-                                                    onChange={(e) => setUploadMethod(e.target.value)}
-                                                />
-                                                自動（10MB以下は直接アップロード）
-                                            </label>
-                                            <label>
-                                                <input 
-                                                    type="radio" 
-                                                    value="firebase" 
-                                                    checked={uploadMethod === 'firebase'}
-                                                    onChange={(e) => setUploadMethod(e.target.value)}
-                                                />
-                                                常にFirebaseにアップロード
-                                            </label>
-                                            <label>
-                                                <input 
-                                                    type="radio" 
-                                                    value="link" 
-                                                    checked={uploadMethod === 'link'}
-                                                    onChange={(e) => setUploadMethod(e.target.value)}
-                                                />
-                                                外部リンクを使用
-                                            </label>
-                                        </div>
-                                    )}
-                                    
-                                    <div 
-                                        className={`drop-zone ${dragOver ? 'drag-over' : ''}`}
-                                        onDrop={handleDrop}
-                                        onDragOver={(e) => {
-                                            e.preventDefault();
-                                            setDragOver(true);
-                                        }}
-                                        onDragLeave={() => setDragOver(false)}
-                                    >
-                                        {uploading ? (
-                                            <p>アップロード中...</p>
-                                        ) : (
-                                            <>
-                                                <p className="text-lg mb-2">音声ファイルをドラッグ&ドロップ</p>
-                                                <p className="text-sm text-gray-400 mb-4">または</p>
-                                                <div className="flex gap-4 justify-center">
-                                                    {isFirebaseEnabled && (
-                                                        <>
-                                                            <input
-                                                                ref={fileInputRef}
-                                                                type="file"
-                                                                accept="audio/*"
-                                                                multiple
-                                                                onChange={handleFileInput}
-                                                                style={{ display: 'none' }}
-                                                            />
-                                                            <button 
-                                                                onClick={() => fileInputRef.current?.click()}
-                                                                className="btn-primary"
-                                                            >
-                                                                ファイルを選択
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    <button 
-                                                        onClick={() => setShowLinkModal(true)}
-                                                        className="btn-primary"
-                                                    >
-                                                        外部リンクを追加
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="mt-6">
-                                        <h3 className="text-lg font-semibold mb-3">音源リスト</h3>
-                                        {audioSources.length === 0 ? (
-                                            <p className="text-gray-400">まだ音源がありません</p>
-                                        ) : (
-                                            audioSources.map((source, index) => (
-                                                <div key={index} className="audio-source-item">
-                                                    <div>
-                                                        <p className="font-medium">{source.name}</p>
-                                                        <p className="text-sm text-gray-400">
-                                                            {source.type === 'firebase' 
-                                                                ? `Firebase (${(source.size / 1024 / 1024).toFixed(1)}MB)`
-                                                                : source.type.replace('_', ' ')
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        {source.url && (
-                                                            <a 
-                                                                href={source.url} 
-                                                                target="_blank" 
-                                                                rel="noopener noreferrer"
-                                                                className="text-purple-400 hover:text-purple-300"
-                                                            >
-                                                                再生
-                                                            </a>
-                                                        )}
-                                                        <button
-                                                            onClick={() => deleteAudioSource(index)}
-                                                            className="text-red-400 hover:text-red-300"
-                                                        >
-                                                            削除
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </>
-                            ) : (
-                                <p className="text-center text-gray-400 py-8">
-                                    セッションを選択または作成してください
-                                </p>
-                            )}
-                        </div>
-                    </div>
+        function processUrl(url) {
+            if (url.includes('drive.google.com')) {
+                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match) {
+                    return 'https://drive.google.com/uc?export=download&id=' + match[1];
+                }
+            }
+            return url;
+        }
 
-                    {showLinkModal && (
-                        <div className="modal-overlay" onClick={() => setShowLinkModal(false)}>
-                            <div className="modal-content glass-card" onClick={(e) => e.stopPropagation()}>
-                                <h3 className="text-xl font-bold mb-4">外部リンクを追加</h3>
-                                
-                                <input
-                                    type="text"
-                                    placeholder="音源の名前"
-                                    value={externalLinkName}
-                                    onChange={(e) => setExternalLinkName(e.target.value)}
-                                    className="input-field"
-                                />
-                                
-                                <input
-                                    type="url"
-                                    placeholder="URL (Google Drive, YouTube, SoundCloud など)"
-                                    value={externalLink}
-                                    onChange={(e) => setExternalLink(e.target.value)}
-                                    className="input-field"
-                                />
-                                
-                                <div className="text-sm text-gray-400 mb-4">
-                                    <p>対応サービス:</p>
-                                    <ul className="list-disc list-inside ml-2">
-                                        <li>Google Drive (共有リンク)</li>
-                                        <li>YouTube</li>
-                                        <li>SoundCloud</li>
-                                        <li>その他の直接リンク</li>
-                                    </ul>
-                                </div>
-                                
-                                <div className="flex gap-4">
-                                    <button
-                                        onClick={handleExternalLinkAdd}
-                                        className="btn-primary flex-1"
-                                    >
-                                        追加
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowLinkModal(false);
-                                            setExternalLink('');
-                                            setExternalLinkName('');
-                                        }}
-                                        className="btn-secondary flex-1"
-                                    >
-                                        キャンセル
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
+        function extractFileName(url) {
+            try {
+                const urlObj = new URL(url);
+                const pathname = urlObj.pathname;
+                const parts = pathname.split('/');
+                return decodeURIComponent(parts[parts.length - 1]) || '外部音源';
+            } catch {
+                return '外部音源';
+            }
+        }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<StudioApp />);
-        //]]>
+        function deleteAudioSource(index) {
+            audioSources.splice(index, 1);
+            saveToSession();
+        }
+
+        function saveToSession() {
+            if (!currentSession) return;
+            
+            currentSession.recordings = audioSources;
+            
+            if (isFirebaseEnabled && database) {
+                database.ref('sessions/' + currentSession.id + '/recordings').set(audioSources);
+            } else {
+                const localSessions = JSON.parse(localStorage.getItem('band_sessions') || '{}');
+                localSessions[currentSession.id] = currentSession;
+                localStorage.setItem('band_sessions', JSON.stringify(localSessions));
+            }
+            
+            renderApp();
+        }
+
+        function loadSessions() {
+            if (isFirebaseEnabled && database) {
+                database.ref('sessions').on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    sessions = Object.entries(data).map(([id, session]) => ({
+                        id: id,
+                        ...session
+                    }));
+                    sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    renderApp();
+                });
+            } else {
+                const localSessions = JSON.parse(localStorage.getItem('band_sessions') || '{}');
+                sessions = Object.entries(localSessions).map(([id, session]) => ({
+                    id: id,
+                    ...session
+                }));
+                sessions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                renderApp();
+            }
+        }
+
+        // アプリケーションをレンダリング
+        function renderApp() {
+            const root = document.getElementById('root');
+            root.innerHTML = '';
+            root.appendChild(createMainScreen());
+        }
+
+        // 初期化
+        loadSessions();
     </script>
 </body>
 </html>
