@@ -198,7 +198,7 @@
             const [draggedSong, setDraggedSong] = useState(null);
             const [dragOverIndex, setDragOverIndex] = useState(null);
             const [showNewSongForm, setShowNewSongForm] = useState(false);
-            const [newSong, setNewSong] = useState({ title: '', duration: '' });
+            const [newSong, setNewSong] = useState({ title: '', duration: '', artist: '', youtubeUrl: '', anime: '' });
             const [searchQuery, setSearchQuery] = useState('');
 
             // セットリスト一覧を取得
@@ -301,13 +301,26 @@
                 }
             };
 
+            // セットリストを削除
+            const deleteSetlist = (setlistId) => {
+                if (database) {
+                    database.ref(`setlists/${setlistId}`).remove();
+                    if (currentSetlist?.id === setlistId) {
+                        setCurrentSetlist(null);
+                    }
+                }
+            };
+
             // 新しい曲を追加
             const addNewSong = () => {
                 if (!newSong.title.trim()) return;
                 
                 const song = {
                     title: newSong.title.trim(),
-                    duration: newSong.duration.trim() || '3:00'
+                    duration: newSong.duration.trim() || '3:00',
+                    artist: newSong.artist.trim() || '',
+                    youtubeUrl: newSong.youtubeUrl.trim() || '',
+                    anime: newSong.anime.trim() || ''
                 };
                 
                 if (database) {
@@ -315,7 +328,7 @@
                     newRef.set(song);
                 }
                 
-                setNewSong({ title: '', duration: '' });
+                setNewSong({ title: '', duration: '', artist: '', youtubeUrl: '', anime: '' });
                 setShowNewSongForm(false);
             };
 
@@ -460,18 +473,150 @@
                                                 ? 'bg-purple-600/30 border border-purple-500'
                                                 : 'bg-black/20 hover:bg-black/30'
                                         }`}
-                                        onClick={() => setCurrentSetlist(setlist)}
                                     >
-                                        <p className="font-medium">{setlist.name}</p>
-                                        <p className="text-sm text-gray-400">
-                                            {new Date(setlist.date).toLocaleDateString('ja-JP')}
-                                        </p>
+                                        <div className="flex justify-between items-start">
+                                            <div
+                                                className="flex-1"
+                                                onClick={() => setCurrentSetlist(setlist)}
+                                            >
+                                                <p className="font-medium">{setlist.name}</p>
+                                                <p className="text-sm text-gray-400">
+                                                    {new Date(setlist.date).toLocaleDateString('ja-JP')}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm(`「${setlist.name}」を削除しますか？`)) {
+                                                        deleteSetlist(setlist.id);
+                                                    }
+                                                }}
+                                                className="text-red-400 hover:text-red-500 p-1 ml-2"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* 現在のセットリスト */}
+                        {/* 全曲リスト（中央） */}
+                        <div className="glass-card p-6">
+                            <h2 className="text-xl font-bold mb-4">全曲リスト</h2>
+                            
+                            {/* 検索バー */}
+                            <input
+                                type="text"
+                                placeholder="曲名・アーティスト・アニメで検索..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full mb-4 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
+                            />
+                            
+                            {showNewSongForm ? (
+                                <div className="mb-4 p-4 bg-black/20 rounded-lg">
+                                    <input
+                                        type="text"
+                                        placeholder="曲名 *"
+                                        value={newSong.title}
+                                        onChange={(e) => setNewSong({...newSong, title: e.target.value})}
+                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="アーティスト"
+                                        value={newSong.artist}
+                                        onChange={(e) => setNewSong({...newSong, artist: e.target.value})}
+                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="時間 (例: 3:30)"
+                                        value={newSong.duration}
+                                        onChange={(e) => setNewSong({...newSong, duration: e.target.value})}
+                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="YouTube URL"
+                                        value={newSong.youtubeUrl}
+                                        onChange={(e) => setNewSong({...newSong, youtubeUrl: e.target.value})}
+                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="アニメ作品名"
+                                        value={newSong.anime}
+                                        onChange={(e) => setNewSong({...newSong, anime: e.target.value})}
+                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={addNewSong}
+                                            className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
+                                        >
+                                            追加
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowNewSongForm(false);
+                                                setNewSong({ title: '', duration: '', artist: '', youtubeUrl: '', anime: '' });
+                                            }}
+                                            className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-sm"
+                                        >
+                                            キャンセル
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowNewSongForm(true)}
+                                    className="add-song-btn"
+                                >
+                                    + 新しい曲を追加
+                                </button>
+                            )}
+                            
+                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                                {filteredSongs.map(song => (
+                                    <div
+                                        key={song.id}
+                                        className="song-card"
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, song, false)}
+                                        onDragEnd={() => setDraggedSong(null)}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex-1">
+                                                <p className="font-medium">{song.title}</p>
+                                                <p className="text-sm text-gray-400">
+                                                    {song.artist && `${song.artist} • `}{song.duration}
+                                                </p>
+                                                {song.anime && (
+                                                    <p className="text-xs text-purple-400 mt-1">{song.anime}</p>
+                                                )}
+                                            </div>
+                                            {song.youtubeUrl && (
+                                                <a
+                                                    href={song.youtubeUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="ml-2 text-red-400 hover:text-red-500 p-1"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                                                    </svg>
+                                                </a>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 現在のセットリスト（右） */}
                         <div className="glass-card p-6">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-xl font-bold">現在のセットリスト</h2>
@@ -534,100 +679,6 @@
                                         セットリストを選択または作成してください
                                     </p>
                                 )}
-                            </div>
-                        </div>
-
-                        {/* 全曲リスト */}
-                        <div className="glass-card p-6">
-                            <h2 className="text-xl font-bold mb-4">全曲リスト</h2>
-                            
-                            {/* 検索バー */}
-                            <input
-                                type="text"
-                                placeholder="曲名・アーティスト・アニメで検索..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full mb-4 px-4 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                            />
-                            
-                            {showNewSongForm ? (
-                                <div className="mb-4 p-4 bg-black/20 rounded-lg">
-                                    <input
-                                        type="text"
-                                        placeholder="曲名"
-                                        value={newSong.title}
-                                        onChange={(e) => setNewSong({...newSong, title: e.target.value})}
-                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
-                                    <input
-                                        type="text"
-                                        placeholder="時間 (例: 3:30)"
-                                        value={newSong.duration}
-                                        onChange={(e) => setNewSong({...newSong, duration: e.target.value})}
-                                        className="w-full mb-2 px-3 py-2 bg-black/30 rounded-lg outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={addNewSong}
-                                            className="flex-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
-                                        >
-                                            追加
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowNewSongForm(false);
-                                                setNewSong({ title: '', duration: '' });
-                                            }}
-                                            className="flex-1 px-3 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-sm"
-                                        >
-                                            キャンセル
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => setShowNewSongForm(true)}
-                                    className="add-song-btn"
-                                >
-                                    + 新しい曲を追加
-                                </button>
-                            )}
-                            
-                            <div className="space-y-2 max-h-96 overflow-y-auto">
-                                {filteredSongs.map(song => (
-                                    <div
-                                        key={song.id}
-                                        className="song-card"
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, song, false)}
-                                        onDragEnd={() => setDraggedSong(null)}
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex-1">
-                                                <p className="font-medium">{song.title}</p>
-                                                <p className="text-sm text-gray-400">
-                                                    {song.artist && `${song.artist} • `}{song.duration}
-                                                </p>
-                                                {song.anime && (
-                                                    <p className="text-xs text-purple-400 mt-1">{song.anime}</p>
-                                                )}
-                                            </div>
-                                            {song.youtubeUrl && (
-                                                <a
-                                                    href={song.youtubeUrl}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="ml-2 text-red-400 hover:text-red-500 p-1"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                                                    </svg>
-                                                </a>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
                         </div>
                     </div>
