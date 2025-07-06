@@ -1,838 +1,308 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>スタジオ練習 - バンド活動ハブ</title>
-    
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🎙️</text></svg>">
-    
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
-    
-    <!-- WaveSurfer.js for audio waveform -->
-    <script src="https://unpkg.com/wavesurfer.js@7"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap');
-        
-        body { 
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            background: #1a1a2e;
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 50%);
-            color: #ffffff;
-            min-height: 100vh;
-            margin: 0;
-        }
-        
-        .glass-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        }
-        
-        .tab-button {
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-        
-        .tab-button:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        .tab-button.active {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(6, 182, 212, 0.3));
-            border-color: rgba(16, 185, 129, 0.5);
-        }
-        
-        .audio-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .audio-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-2px);
-        }
-        
-        .task-item {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .task-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        
-        .priority-high {
-            border-left: 4px solid #ef4444;
-        }
-        
-        .priority-medium {
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .priority-low {
-            border-left: 4px solid #10b981;
-        }
-        
-        .rating-star {
-            cursor: pointer;
-            font-size: 24px;
-            transition: all 0.2s ease;
-        }
-        
-        .rating-star:hover {
-            transform: scale(1.2);
-        }
-        
-        /* カスタムファイルアップロード */
-        .file-upload-area {
-            border: 2px dashed rgba(16, 185, 129, 0.5);
-            border-radius: 16px;
-            padding: 40px;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            background: rgba(16, 185, 129, 0.05);
-        }
-        
-        .file-upload-area:hover {
-            border-color: rgba(16, 185, 129, 0.8);
-            background: rgba(16, 185, 129, 0.1);
-        }
-        
-        .file-upload-area.dragover {
-            border-color: rgba(16, 185, 129, 1);
-            background: rgba(16, 185, 129, 0.2);
-        }
-        
-        /* スクロールバー */
-        ::-webkit-scrollbar {
-            width: 12px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #10b981, #06b6d4);
-            border-radius: 10px;
-        }
-        
-        /* WaveSurferのスタイル調整 */
-        #waveform {
-            margin: 20px 0;
-        }
-        
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+# Studio.html 音声ファイル管理の改善提案
 
-        // Firebase設定
-        const firebaseConfig = {
-            apiKey: "AIzaSyDkO7o1e8PNc9seMoMk3eBytSOIOA_Rqaw",
-            authDomain: "band-apps.firebaseapp.com",
-            databaseURL: "https://band-apps-default-rtdb.firebaseio.com",
-            projectId: "band-apps",
-            storageBucket: "band-apps.firebasestorage.app",
-            messagingSenderId: "238355659055",
-            appId: "1:238355659055:web:d07caffb8b2fd6112689da",
-            measurementId: "G-T5ZYHTSS3L"
+## 1. 過去のセッションボタンの重なり問題の修正
+
+CSSで適切な余白を設定し、スクロール可能にします：
+
+```css
+.session-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.session-item {
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.session-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(5px);
+}
+```
+
+## 2. 音声ファイルの管理方法の提案
+
+### A. **ハイブリッドアプローチ（推奨）**
+
+小さいファイルはFirebase Storage、大きいファイルは外部リンクを使用：
+
+```javascript
+const AudioManager = {
+    // ファイルサイズの閾値（10MB）
+    MAX_DIRECT_UPLOAD_SIZE: 10 * 1024 * 1024,
+    
+    // 音声ソースの種類
+    SOURCE_TYPE: {
+        FIREBASE: 'firebase',
+        GOOGLE_DRIVE: 'google_drive',
+        YOUTUBE: 'youtube',
+        SOUNDCLOUD: 'soundcloud',
+        EXTERNAL_URL: 'external_url'
+    },
+    
+    // アップロード処理
+    async handleAudioUpload(file, method = 'auto') {
+        if (method === 'auto') {
+            if (file.size <= this.MAX_DIRECT_UPLOAD_SIZE) {
+                return await this.uploadToFirebase(file);
+            } else {
+                return await this.promptExternalLink();
+            }
+        }
+        
+        switch (method) {
+            case 'firebase':
+                return await this.uploadToFirebase(file);
+            case 'link':
+                return await this.promptExternalLink();
+            default:
+                throw new Error('Invalid upload method');
+        }
+    },
+    
+    // Firebaseへのアップロード
+    async uploadToFirebase(file) {
+        const storageRef = firebase.storage().ref();
+        const audioRef = storageRef.child(`audio/${Date.now()}_${file.name}`);
+        const snapshot = await audioRef.put(file);
+        const downloadURL = await snapshot.ref.getDownloadURL();
+        
+        return {
+            type: this.SOURCE_TYPE.FIREBASE,
+            url: downloadURL,
+            name: file.name,
+            size: file.size,
+            duration: await this.getAudioDuration(file)
         };
-
-        // Firebase初期化
-        let database = null;
-        let storage = null;
-        try {
-            firebase.initializeApp(firebaseConfig);
-            database = firebase.database();
-            storage = firebase.storage();
-        } catch (error) {
-            console.error("Firebase初期化エラー:", error);
-        }
-
-        const StudioPractice = () => {
-            const [activeTab, setActiveTab] = useState('recording');
-            const [sessions, setSessions] = useState([]);
-            const [currentSession, setCurrentSession] = useState(null);
-            const [audioFiles, setAudioFiles] = useState([]);
-            const [tasks, setTasks] = useState([]);
-            const [notes, setNotes] = useState({ good: '', improve: '' });
-            const [songRatings, setSongRatings] = useState({});
-            const [songs, setSongs] = useState(['曲1', '曲2', '曲3']);
-            const [editingSongIndex, setEditingSongIndex] = useState(null);
-            const [uploading, setUploading] = useState(false);
-            const [dragOver, setDragOver] = useState(false);
-            const fileInputRef = useRef(null);
-            const [currentAudio, setCurrentAudio] = useState(null);
-            const [wavesurfer, setWavesurfer] = useState(null);
-
-            // 新規セッション作成
-            const createNewSession = () => {
-                const newSession = {
-                    id: Date.now().toString(),
-                    date: new Date().toISOString(),
-                    name: `練習 ${new Date().toLocaleDateString('ja-JP')}`,
-                    studio: '',
-                    members: [],
-                    notes: { good: '', improve: '' },
-                    tasks: [],
-                    audioFiles: [],
-                    songRatings: {},
-                    songs: ['曲1', '曲2', '曲3'] // デフォルトの曲リスト
-                };
-                setCurrentSession(newSession);
-                if (database) {
-                    database.ref(`studio_sessions/${newSession.id}`).set(newSession);
-                }
-            };
-
-            // セッション削除
-            const deleteSession = (sessionId) => {
-                if (database && window.confirm('このセッションを削除してもよろしいですか？')) {
-                    database.ref(`studio_sessions/${sessionId}`).remove();
-                    // 現在のセッションが削除された場合、新しいセッションを選択
-                    if (currentSession?.id === sessionId) {
-                        const remainingSessions = sessions.filter(s => s.id !== sessionId);
-                        if (remainingSessions.length > 0) {
-                            setCurrentSession(remainingSessions[0]);
-                        } else {
-                            setCurrentSession(null);
-                        }
-                    }
-                }
-            };
-
-            // セッション一覧取得
-            useEffect(() => {
-                if (!database) return;
-                
-                const sessionsRef = database.ref('studio_sessions');
-                sessionsRef.on('value', (snapshot) => {
-                    const data = snapshot.val() || {};
-                    const sessionsList = Object.values(data).sort((a, b) => 
-                        new Date(b.date) - new Date(a.date)
-                    );
-                    setSessions(sessionsList);
-                    if (sessionsList.length > 0 && !currentSession) {
-                        setCurrentSession(sessionsList[0]);
-                    }
-                });
-
-                return () => sessionsRef.off();
-            }, []);
-
-            // 音声ファイルアップロード
-            const handleFileUpload = async (files) => {
-                if (!storage || !currentSession) return;
-                
-                setUploading(true);
-                
-                for (const file of files) {
-                    if (file.type.startsWith('audio/')) {
-                        try {
-                            const timestamp = Date.now();
-                            const fileName = `${currentSession.id}/${timestamp}_${file.name}`;
-                            const storageRef = storage.ref(fileName);
-                            
-                            await storageRef.put(file);
-                            const url = await storageRef.getDownloadURL();
-                            
-                            const audioData = {
-                                id: timestamp.toString(),
-                                name: file.name,
-                                url: url,
-                                uploadedAt: new Date().toISOString(),
-                                comments: []
-                            };
-                            
-                            // データベースに保存
-                            database.ref(`studio_sessions/${currentSession.id}/audioFiles/${audioData.id}`).set(audioData);
-                            
-                        } catch (error) {
-                            console.error('アップロードエラー:', error);
-                        }
-                    }
-                }
-                
-                setUploading(false);
-            };
-
-            // ドラッグ&ドロップ処理
-            const handleDragOver = (e) => {
-                e.preventDefault();
-                setDragOver(true);
-            };
-
-            const handleDragLeave = () => {
-                setDragOver(false);
-            };
-
-            const handleDrop = (e) => {
-                e.preventDefault();
-                setDragOver(false);
-                const files = Array.from(e.dataTransfer.files);
-                handleFileUpload(files);
-            };
-
-            // タスク追加
-            const addTask = () => {
-                const newTask = {
-                    id: Date.now().toString(),
-                    text: '',
-                    assignee: '全員',
-                    priority: 'medium',
-                    completed: false,
-                    createdAt: new Date().toISOString()
-                };
-                
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/tasks/${newTask.id}`).set(newTask);
-                }
-            };
-
-            // タスク更新
-            const updateTask = (taskId, updates) => {
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/tasks/${taskId}`).update(updates);
-                }
-            };
-
-            // メモ保存
-            const saveNotes = () => {
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/notes`).set(notes);
-                }
-            };
-
-            // 曲の評価
-            const rateSong = (songName, rating) => {
-                const newRatings = { ...songRatings, [songName]: rating };
-                setSongRatings(newRatings);
-                
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/songRatings`).set(newRatings);
-                }
-            };
-
-            // 曲名の更新
-            const updateSongName = (index, newName) => {
-                const newSongs = [...songs];
-                const oldName = newSongs[index];
-                newSongs[index] = newName;
-                setSongs(newSongs);
-                
-                // 評価も新しい曲名に移行
-                if (songRatings[oldName]) {
-                    const newRatings = { ...songRatings };
-                    newRatings[newName] = newRatings[oldName];
-                    delete newRatings[oldName];
-                    setSongRatings(newRatings);
-                    
-                    if (database && currentSession) {
-                        database.ref(`studio_sessions/${currentSession.id}/songRatings`).set(newRatings);
-                    }
-                }
-                
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/songs`).set(newSongs);
-                }
-            };
-
-            // 曲の追加
-            const addSong = () => {
-                const newSongs = [...songs, `曲${songs.length + 1}`];
-                setSongs(newSongs);
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/songs`).set(newSongs);
-                }
-            };
-
-            // 曲の削除
-            const deleteSong = (index) => {
-                const songName = songs[index];
-                const newSongs = songs.filter((_, i) => i !== index);
-                setSongs(newSongs);
-                
-                // 評価も削除
-                const newRatings = { ...songRatings };
-                delete newRatings[songName];
-                setSongRatings(newRatings);
-                
-                if (database && currentSession) {
-                    database.ref(`studio_sessions/${currentSession.id}/songs`).set(newSongs);
-                    database.ref(`studio_sessions/${currentSession.id}/songRatings`).set(newRatings);
-                }
-            };
-
-            // 現在のセッションのデータを監視
-            useEffect(() => {
-                if (!database || !currentSession) return;
-                
-                const sessionRef = database.ref(`studio_sessions/${currentSession.id}`);
-                
-                // 音声ファイル
-                sessionRef.child('audioFiles').on('value', (snapshot) => {
-                    const data = snapshot.val() || {};
-                    setAudioFiles(Object.values(data));
-                });
-                
-                // タスク
-                sessionRef.child('tasks').on('value', (snapshot) => {
-                    const data = snapshot.val() || {};
-                    setTasks(Object.values(data));
-                });
-                
-                // メモ
-                sessionRef.child('notes').on('value', (snapshot) => {
-                    const data = snapshot.val() || { good: '', improve: '' };
-                    setNotes(data);
-                });
-                
-                // 曲の評価
-                sessionRef.child('songRatings').on('value', (snapshot) => {
-                    const data = snapshot.val() || {};
-                    setSongRatings(data);
-                });
-                
-                // 曲リスト
-                sessionRef.child('songs').on('value', (snapshot) => {
-                    const data = snapshot.val() || ['曲1', '曲2', '曲3'];
-                    setSongs(data);
-                });
-                
-                return () => {
-                    sessionRef.child('audioFiles').off();
-                    sessionRef.child('tasks').off();
-                    sessionRef.child('notes').off();
-                    sessionRef.child('songRatings').off();
-                    sessionRef.child('songs').off();
-                };
-            }, [currentSession]);
-
-            // タブコンテンツ
-            const renderTabContent = () => {
-                switch (activeTab) {
-                    case 'recording':
-                        return (
-                            <div className="space-y-6">
-                                <div
-                                    className={`file-upload-area ${dragOver ? 'dragover' : ''}`}
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="audio/*"
-                                        multiple
-                                        onChange={(e) => handleFileUpload(Array.from(e.target.files))}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <div>
-                                        <p className="text-2xl mb-2">🎵</p>
-                                        <p className="text-lg font-medium mb-2">
-                                            音声ファイルをドラッグ&ドロップ
-                                        </p>
-                                        <p className="text-gray-400 text-sm">
-                                            またはクリックしてファイルを選択
-                                        </p>
-                                        {uploading && (
-                                            <p className="text-emerald-400 mt-4">
-                                                アップロード中...
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {audioFiles.map((audio) => (
-                                        <div key={audio.id} className="audio-item">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div>
-                                                    <h4 className="text-lg font-medium">
-                                                        {audio.name}
-                                                    </h4>
-                                                    <p className="text-sm text-gray-400">
-                                                        {new Date(audio.uploadedAt).toLocaleString('ja-JP')}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={() => setCurrentAudio(audio)}
-                                                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-colors"
-                                                >
-                                                    再生
-                                                </button>
-                                            </div>
-                                            
-                                            {currentAudio?.id === audio.id && (
-                                                <div id="waveform"></div>
-                                            )}
-                                            
-                                            <div className="mt-4">
-                                                <p className="text-sm text-gray-400 mb-2">コメント</p>
-                                                <textarea
-                                                    className="w-full px-4 py-2 bg-black/30 rounded-lg border border-gray-600 focus:border-emerald-500 outline-none"
-                                                    placeholder="タイムスタンプ付きでコメントを追加..."
-                                                    rows="2"
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-
-                    case 'review':
-                        return (
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div className="glass-card p-6">
-                                        <h3 className="text-xl font-bold mb-4 text-emerald-400">
-                                            良かった点 ✨
-                                        </h3>
-                                        <textarea
-                                            value={notes.good}
-                                            onChange={(e) => setNotes({ ...notes, good: e.target.value })}
-                                            onBlur={saveNotes}
-                                            className="w-full h-40 px-4 py-3 bg-black/30 rounded-lg border border-gray-600 focus:border-emerald-500 outline-none resize-none"
-                                            placeholder="今日の練習で良かった点を記録..."
-                                        />
-                                    </div>
-                                    
-                                    <div className="glass-card p-6">
-                                        <h3 className="text-xl font-bold mb-4 text-orange-400">
-                                            改善点 📝
-                                        </h3>
-                                        <textarea
-                                            value={notes.improve}
-                                            onChange={(e) => setNotes({ ...notes, improve: e.target.value })}
-                                            onBlur={saveNotes}
-                                            className="w-full h-40 px-4 py-3 bg-black/30 rounded-lg border border-gray-600 focus:border-orange-500 outline-none resize-none"
-                                            placeholder="次回に向けて改善したい点..."
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="glass-card p-6">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-xl font-bold">曲ごとの評価</h3>
-                                        <button
-                                            onClick={addSong}
-                                            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg text-sm font-medium transition-colors"
-                                        >
-                                            + 曲を追加
-                                        </button>
-                                    </div>
-                                    <div className="space-y-4">
-                                        {songs.map((song, index) => (
-                                            <div key={index} className="flex items-center justify-between p-4 bg-black/20 rounded-lg">
-                                                {editingSongIndex === index ? (
-                                                    <input
-                                                        type="text"
-                                                        value={song}
-                                                        onChange={(e) => {
-                                                            const newSongs = [...songs];
-                                                            newSongs[index] = e.target.value;
-                                                            setSongs(newSongs);
-                                                        }}
-                                                        onBlur={() => {
-                                                            updateSongName(index, song);
-                                                            setEditingSongIndex(null);
-                                                        }}
-                                                        onKeyPress={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                updateSongName(index, song);
-                                                                setEditingSongIndex(null);
-                                                            }
-                                                        }}
-                                                        className="bg-black/30 px-3 py-1 rounded-lg outline-none border border-emerald-500"
-                                                        autoFocus
-                                                    />
-                                                ) : (
-                                                    <span 
-                                                        className="font-medium cursor-pointer hover:text-emerald-400"
-                                                        onClick={() => setEditingSongIndex(index)}
-                                                    >
-                                                        {song}
-                                                    </span>
-                                                )}
-                                                <div className="flex items-center gap-4">
-                                                    <div className="flex gap-2">
-                                                        {[1, 2, 3, 4, 5].map((star) => (
-                                                            <span
-                                                                key={star}
-                                                                className={`rating-star ${songRatings[song] >= star ? 'text-yellow-400' : 'text-gray-600'}`}
-                                                                onClick={() => rateSong(song, star)}
-                                                            >
-                                                                ★
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                    <button
-                                                        onClick={() => deleteSong(index)}
-                                                        className="text-red-400 hover:text-red-500 text-sm"
-                                                    >
-                                                        削除
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-
-                    case 'tasks':
-                        return (
-                            <div className="space-y-6">
-                                <button
-                                    onClick={addTask}
-                                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 rounded-lg font-medium transition-all transform hover:scale-105"
-                                >
-                                    + 新しいタスクを追加
-                                </button>
-
-                                <div className="space-y-4">
-                                    {tasks.map((task) => (
-                                        <div key={task.id} className={`task-item priority-${task.priority}`}>
-                                            <div className="flex items-start gap-4">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={task.completed}
-                                                    onChange={(e) => updateTask(task.id, { completed: e.target.checked })}
-                                                    className="mt-1 w-5 h-5 rounded"
-                                                />
-                                                <div className="flex-1">
-                                                    <input
-                                                        type="text"
-                                                        value={task.text}
-                                                        onChange={(e) => updateTask(task.id, { text: e.target.value })}
-                                                        className="w-full bg-transparent outline-none text-lg mb-2"
-                                                        placeholder="タスクを入力..."
-                                                    />
-                                                    <div className="flex gap-4 text-sm">
-                                                        <select
-                                                            value={task.assignee}
-                                                            onChange={(e) => updateTask(task.id, { assignee: e.target.value })}
-                                                            className="bg-black/30 px-3 py-1 rounded-lg outline-none"
-                                                        >
-                                                            <option>全員</option>
-                                                            <option>Vo</option>
-                                                            <option>Gt</option>
-                                                            <option>Ba</option>
-                                                            <option>Dr</option>
-                                                        </select>
-                                                        <select
-                                                            value={task.priority}
-                                                            onChange={(e) => updateTask(task.id, { priority: e.target.value })}
-                                                            className="bg-black/30 px-3 py-1 rounded-lg outline-none"
-                                                        >
-                                                            <option value="high">高</option>
-                                                            <option value="medium">中</option>
-                                                            <option value="low">低</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-
-                    case 'settings':
-                        return (
-                            <div className="space-y-6">
-                                <div className="glass-card p-6">
-                                    <h3 className="text-xl font-bold mb-4">セッション情報</h3>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-2">
-                                                スタジオ名
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="w-full px-4 py-2 bg-black/30 rounded-lg border border-gray-600 focus:border-emerald-500 outline-none"
-                                                placeholder="スタジオ名を入力..."
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm text-gray-400 mb-2">
-                                                参加メンバー
-                                            </label>
-                                            <div className="flex gap-2 flex-wrap">
-                                                {['Vo', 'Gt', 'Ba', 'Dr', 'Key'].map((member) => (
-                                                    <label key={member} className="flex items-center gap-2">
-                                                        <input type="checkbox" className="rounded" />
-                                                        <span>{member}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="glass-card p-6">
-                                    <h3 className="text-xl font-bold mb-4">機材セッティング</h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="aspect-video bg-black/30 rounded-lg flex items-center justify-center cursor-pointer hover:bg-black/40 transition-colors">
-                                            <div className="text-center">
-                                                <p className="text-4xl mb-2">📷</p>
-                                                <p className="text-sm text-gray-400">写真を追加</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                }
-            };
-
-            return (
-                <div className="min-h-screen p-4">
-                    {/* ヘッダー */}
-                    <header className="glass-card mb-6 p-6">
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <h1 className="text-3xl font-bold mb-2">
-                                    🎙️ スタジオ練習記録
-                                </h1>
-                                <p className="text-gray-400">
-                                    {currentSession ? new Date(currentSession.date).toLocaleDateString('ja-JP') : '新規セッション'}
-                                </p>
-                            </div>
-                            <div className="flex gap-4">
-                                <button
-                                    onClick={createNewSession}
-                                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 rounded-lg font-medium transition-colors"
-                                >
-                                    新規セッション
-                                </button>
-                                <a
-                                    href="index.html"
-                                    className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-medium transition-colors"
-                                >
-                                    ホームに戻る
-                                </a>
-                            </div>
-                        </div>
-                    </header>
-
-                    {/* タブナビゲーション */}
-                    <div className="glass-card mb-6 p-2">
-                        <div className="flex gap-2 overflow-x-auto">
-                            <button
-                                className={`tab-button ${activeTab === 'recording' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('recording')}
-                            >
-                                🎵 録音管理
-                            </button>
-                            <button
-                                className={`tab-button ${activeTab === 'review' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('review')}
-                            >
-                                📝 振り返り
-                            </button>
-                            <button
-                                className={`tab-button ${activeTab === 'tasks' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('tasks')}
-                            >
-                                ✅ タスク
-                            </button>
-                            <button
-                                className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
-                                onClick={() => setActiveTab('settings')}
-                            >
-                                ⚙️ 設定
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* メインコンテンツ */}
-                    <main className="glass-card p-6 slide-in">
-                        {renderTabContent()}
-                    </main>
-
-                    {/* セッション一覧サイドバー */}
-                    <aside className="fixed right-4 top-4 w-80 glass-card p-4 max-h-screen overflow-y-auto hidden xl:block">
-                        <h3 className="text-lg font-bold mb-4">過去のセッション</h3>
-                        <div className="space-y-2">
-                            {sessions.map((session) => (
-                                <div
-                                    key={session.id}
-                                    className={`p-3 rounded-lg cursor-pointer transition-colors relative group ${
-                                        currentSession?.id === session.id
-                                            ? 'bg-emerald-500/20 border border-emerald-500/50'
-                                            : 'bg-black/20 hover:bg-black/30'
-                                    }`}
-                                >
-                                    <div onClick={() => setCurrentSession(session)}>
-                                        <p className="font-medium">{session.name}</p>
-                                        <p className="text-sm text-gray-400">
-                                            {new Date(session.date).toLocaleDateString('ja-JP')}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteSession(session.id);
-                                        }}
-                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-400 hover:text-red-500"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </aside>
-                </div>
-            );
+    },
+    
+    // 外部リンクの入力を促す
+    async promptExternalLink() {
+        // モーダルダイアログを表示
+        const link = await this.showLinkModal();
+        const sourceType = this.detectSourceType(link);
+        
+        return {
+            type: sourceType,
+            url: link,
+            name: this.extractFileName(link),
+            size: null,
+            duration: null
         };
+    },
+    
+    // リンクの種類を判定
+    detectSourceType(url) {
+        if (url.includes('drive.google.com')) {
+            return this.SOURCE_TYPE.GOOGLE_DRIVE;
+        } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            return this.SOURCE_TYPE.YOUTUBE;
+        } else if (url.includes('soundcloud.com')) {
+            return this.SOURCE_TYPE.SOUNDCLOUD;
+        }
+        return this.SOURCE_TYPE.EXTERNAL_URL;
+    },
+    
+    // Google Driveの共有リンクを直接再生可能なURLに変換
+    convertGoogleDriveUrl(shareUrl) {
+        // 共有リンクからファイルIDを抽出
+        const match = shareUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        if (match) {
+            const fileId = match[1];
+            return `https://drive.google.com/uc?export=download&id=${fileId}`;
+        }
+        return shareUrl;
+    }
+};
+```
 
-        // アプリをレンダリング
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<StudioPractice />);
-    </script>
-</body>
-</html>
+### B. **UI実装例**
+
+```javascript
+const AudioUploadComponent = () => {
+    const [uploadMethod, setUploadMethod] = useState('auto');
+    const [audioSources, setAudioSources] = useState([]);
+    
+    const handleDrop = async (e) => {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer.files);
+        
+        for (const file of files) {
+            if (file.type.startsWith('audio/')) {
+                const audioData = await AudioManager.handleAudioUpload(file, uploadMethod);
+                setAudioSources(prev => [...prev, audioData]);
+            }
+        }
+    };
+    
+    const handleLinkAdd = async () => {
+        const audioData = await AudioManager.promptExternalLink();
+        setAudioSources(prev => [...prev, audioData]);
+    };
+    
+    return (
+        <div>
+            {/* アップロード方法の選択 */}
+            <div className="upload-method-selector">
+                <label>
+                    <input 
+                        type="radio" 
+                        value="auto" 
+                        checked={uploadMethod === 'auto'}
+                        onChange={(e) => setUploadMethod(e.target.value)}
+                    />
+                    自動（10MB以下は直接アップロード）
+                </label>
+                <label>
+                    <input 
+                        type="radio" 
+                        value="firebase" 
+                        checked={uploadMethod === 'firebase'}
+                        onChange={(e) => setUploadMethod(e.target.value)}
+                    />
+                    常にFirebaseにアップロード
+                </label>
+                <label>
+                    <input 
+                        type="radio" 
+                        value="link" 
+                        checked={uploadMethod === 'link'}
+                        onChange={(e) => setUploadMethod(e.target.value)}
+                    />
+                    外部リンクを使用
+                </label>
+            </div>
+            
+            {/* ドラッグ&ドロップエリア */}
+            <div 
+                className="drop-zone"
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+            >
+                <p>音声ファイルをドラッグ&ドロップ</p>
+                <p>または</p>
+                <button onClick={handleLinkAdd}>
+                    外部リンクを追加
+                </button>
+            </div>
+            
+            {/* 音源リスト */}
+            <div className="audio-sources">
+                {audioSources.map((source, index) => (
+                    <AudioSourceItem key={index} source={source} />
+                ))}
+            </div>
+        </div>
+    );
+};
+```
+
+### C. **データベース構造**
+
+```javascript
+// Firebaseデータベースの構造
+{
+    sessions: {
+        sessionId: {
+            name: "セッション名",
+            date: "2025-01-01",
+            recordings: [
+                {
+                    id: "recording1",
+                    type: "firebase",
+                    url: "https://firebasestorage.googleapis.com/...",
+                    name: "ボーカル.mp3",
+                    size: 5242880,
+                    duration: 180
+                },
+                {
+                    id: "recording2",
+                    type: "google_drive",
+                    url: "https://drive.google.com/file/d/...",
+                    name: "ギター.mp3",
+                    size: null,
+                    duration: null
+                }
+            ]
+        }
+    }
+}
+```
+
+## 3. 実装の利点
+
+### 🎯 **ユーザー体験の向上**
+- 小さいファイルは即座にアップロード
+- 大きいファイルは外部サービスを活用
+- 柔軟な選択肢を提供
+
+### 💰 **コスト最適化**
+- Firebase Storageの使用量を削減
+- 帯域幅コストの節約
+- 無料枠内での運用が可能
+
+### 🚀 **パフォーマンス**
+- アップロード時間の短縮
+- ストリーミング再生のサポート
+- CDN経由での高速配信
+
+### 🔧 **実装の簡単さ**
+- 既存のコードへの統合が容易
+- 段階的な移行が可能
+- メンテナンスが簡単
+
+## 4. 追加の最適化案
+
+### A. **音声圧縮**
+```javascript
+// Web Audio APIを使用した圧縮
+async function compressAudio(file) {
+    const audioContext = new AudioContext();
+    const audioBuffer = await file.arrayBuffer();
+    const decodedAudio = await audioContext.decodeAudioData(audioBuffer);
+    
+    // ビットレートを下げて圧縮
+    // 実装は別途ライブラリを使用
+}
+```
+
+### B. **プログレッシブアップロード**
+```javascript
+// 大きなファイルを分割してアップロード
+async function uploadInChunks(file, chunkSize = 1024 * 1024) {
+    const chunks = Math.ceil(file.size / chunkSize);
+    
+    for (let i = 0; i < chunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+        
+        // チャンクをアップロード
+        await uploadChunk(chunk, i, chunks);
+    }
+}
+```
+
+### C. **キャッシング戦略**
+```javascript
+// IndexedDBを使用したローカルキャッシュ
+const AudioCache = {
+    async saveToCache(audioData) {
+        const db = await this.openDB();
+        const transaction = db.transaction(['audio'], 'readwrite');
+        const store = transaction.objectStore('audio');
+        await store.put(audioData);
+    },
+    
+    async getFromCache(audioId) {
+        const db = await this.openDB();
+        const transaction = db.transaction(['audio'], 'readonly');
+        const store = transaction.objectStore('audio');
+        return await store.get(audioId);
+    }
+};
