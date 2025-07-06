@@ -442,6 +442,13 @@
             }, 1000);
         });
 
+        // データの読み込み（Firebaseが使えない場合のフォールバック）
+        function loadData() {
+            renderPractices();
+            renderTasks();
+            renderReviews();
+        }
+
         // Firebaseからデータを読み込む
         function loadDataFromFirebase() {
             const db = window.firebase.database;
