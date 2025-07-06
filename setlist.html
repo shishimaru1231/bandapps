@@ -1,4 +1,52 @@
-<!DOCTYPE html>
+// 新しい曲を追加
+            const addNewSong = () => {
+                if (!newSong.title.trim()) return;
+                
+                const song = {
+                    title: newSong.title.trim(),
+                    duration: newSong.duration.trim() || '3:00',
+                    artist: newSong.artist.trim() || '',
+                    youtubeUrl: newSong.youtubeUrl.trim() || '',
+                    anime: newSong.anime.trim() || ''
+                };
+                
+                if (database) {
+                    const newRef = database.ref('songs').push();
+                    newRef.set(song);
+                }
+                
+                setNewSong({ title: '', duration: '', artist: '', youtubeUrl: '', anime: '' });
+                setShowNewSongForm(false);
+            };
+
+            // 曲を編集
+            const updateSong = (songId) => {
+                if (!editingSong || !editingSong.title.trim()) return;
+                
+                const updatedSong = {
+                    title: editingSong.title.trim(),
+                    duration: editingSong.duration.trim() || '3:00',
+                    artist: editingSong.artist.trim() || '',
+                    youtubeUrl: editingSong.youtubeUrl.trim() || '',
+                    anime: editingSong.anime.trim() || ''
+                };
+                
+                if (database) {
+                    database.ref(`songs/${songId}`).set(updatedSong);
+                }
+                
+                setEditingSongId(null);
+                setEditingSong(null);
+            };
+
+            // 曲を削除
+            const deleteSong = (songId) => {
+                if (database) {
+                    database.ref(`songs/${songId}`).remove();
+                }
+            };
+
+            // 曲<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -200,6 +248,8 @@
             const [showNewSongForm, setShowNewSongForm] = useState(false);
             const [newSong, setNewSong] = useState({ title: '', duration: '', artist: '', youtubeUrl: '', anime: '' });
             const [searchQuery, setSearchQuery] = useState('');
+            const [editingSongId, setEditingSongId] = useState(null);
+            const [editingSong, setEditingSong] = useState(null);
 
             // セットリスト一覧を取得
             useEffect(() => {
@@ -451,7 +501,7 @@
                                     新規セットリスト
                                 </button>
                                 <a
-                                    href="index.html"
+                                    href="home.html"
                                     className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-medium transition-colors"
                                 >
                                     ホームに戻る
