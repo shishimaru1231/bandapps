@@ -1,1 +1,107 @@
-<h1>TEST123</h1>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スタジオ練習管理</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+            color: #00d9ff;
+        }
+        .box {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        button {
+            background: #00d9ff;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #00d9ff;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        .item {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #00d9ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>スタジオ練習管理</h1>
+    <div class="box">
+        <h2>新規記録</h2>
+        <input type="date" id="date">
+        <input type="text" id="place" placeholder="場所">
+        <textarea id="memo" placeholder="メモ" rows="3"></textarea>
+        <button onclick="add()">保存</button>
+    </div>
+    <div class="box">
+        <h2>履歴</h2>
+        <div id="list"></div>
+    </div>
+    <script>
+        function add() {
+            var d = document.getElementById('date').value;
+            var p = document.getElementById('place').value;
+            var m = document.getElementById('memo').value;
+            if (!d || !p || !m) {
+                alert('すべて入力してください');
+                return;
+            }
+            var data = JSON.parse(localStorage.getItem('studio') || '[]');
+            data.unshift({date: d, place: p, memo: m, id: Date.now()});
+            localStorage.setItem('studio', JSON.stringify(data));
+            show();
+            document.getElementById('date').value = '';
+            document.getElementById('place').value = '';
+            document.getElementById('memo').value = '';
+        }
+        function del(id) {
+            if (!confirm('削除しますか？')) return;
+            var data = JSON.parse(localStorage.getItem('studio') || '[]');
+            data = data.filter(function(item) { return item.id !== id; });
+            localStorage.setItem('studio', JSON.stringify(data));
+            show();
+        }
+        function show() {
+            var data = JSON.parse(localStorage.getItem('studio') || '[]');
+            var html = '';
+            for (var i = 0; i < data.length; i++) {
+                html += '<div class="item">';
+                html += data[i].date + ' - ' + data[i].place + '<br>';
+                html += data[i].memo + '<br>';
+                html += '<button onclick="del(' + data[i].id + ')">削除</button>';
+                html += '</div>';
+            }
+            document.getElementById('list').innerHTML = html || '<p>記録がありません</p>';
+        }
+        show();
+    </script>
+</body>
+</html>
