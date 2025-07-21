@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LIVEイベント収支シミュレーター</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .control-group:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #495057;
+            font-size: 1.1em;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+        
+        .result-card h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px dotted #dee2e6;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #495057;
+        }
+        
+        .profit {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .loss {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .break-even {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        
+        .scenarios {
+            margin-top: 40px;
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .scenarios h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.5em;
+        }
+        
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .scenario {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .scenario:hover {
+            border-color: #667eea;
+            transform: scale(1.02);
+        }
+        
+        .scenario h4 {
+            margin-bottom: 15px;
+            color: #495057;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 2px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 LIVEイベント収支シミュレーター 🎵</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="venueCost">会場費（円）</label>
+                <input type="number" id="venueCost" value="200000" min="50000" max="500000" step="10000">
+            </div>
+            
+            <div class="control-group">
+                <label for="ticketPrice">チケット料金（円）</label>
+                <input type="number" id="ticketPrice" value="3000" min="1000" max="10000" step="500">
+            </div>
+            
+            <div class="control-group">
+                <label for="audience">集客数（人）</label>
+                <input type="number" id="audience" value="75" min="10" max="300" step="5">
+            </div>
+            
+            <div class="control-group">
+                <label for="performers">出演者数（人）</label>
+                <input type="number" id="performers" value="25" min="5" max="50" step="1">
+            </div>
+            
+            <div class="control-group">
+                <label for="performerFee">出演料金設定</label>
+                <select id="performerFee">
+                    <option value="-5000">出演者負担 5,000円</option>
+                    <option value="-3000">出演者負担 3,000円</option>
+                    <option value="-2000">出演者負担 2,000円</option>
+                    <option value="-1000">出演者負担 1,000円</option>
+                    <option value="0">無料出演</option>
+                    <option value="2000">出演料 2,000円</option>
+                    <option value="3000" selected>出演料 3,000円</option>
+                    <option value="5000">出演料 5,000円</option>
+                    <option value="8000">出演料 8,000円</option>
+                    <option value="10000">出演料 10,000円</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="venuePreset">会場プリセット</label>
+                <select id="venuePreset">
+                    <option value="">カスタム</option>
+                    <option value="80000">小規模ライブハウス（50人）- 8万円</option>
+                    <option value="120000">中規模ライブハウス（100人）- 12万円</option>
+                    <option value="200000">大型ライブハウス（200人）- 20万円</option>
+                    <option value="300000">ホール・劇場（300人）- 30万円</option>
+                    <option value="150000">貸切バー・カフェ（80人）- 15万円</option>
+                    <option value="250000">イベントスペース（150人）- 25万円</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="results">
+            <div class="result-card">
+                <h3>💰 収入</h3>
+                <div class="result-item">
+                    <span>チケット売上</span>
+                    <span id="ticketRevenue">¥225,000</span>
+                </div>
+                <div class="result-item">
+                    <span>合計収入</span>
+                    <span id="totalRevenue">¥225,000</span>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h3>💸 支出</h3>
+                <div class="result-item">
+                    <span>会場費</span>
+                    <span id="venueDisplay">¥200,000</span>
+                </div>
+                <div class="result-item">
+                    <span id="performerFeeLabel">出演料合計</span>
+                    <span id="totalPerformerFee">¥75,000</span>
+                </div>
+                <div class="result-item">
+                    <span>合計支出</span>
+                    <span id="totalCost">¥275,000</span>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h3>📊 収支結果</h3>
+                <div class="result-item">
+                    <span>損益</span>
+                    <span id="profit">-¥50,000</span>
+                </div>
+                <div class="result-item">
+                    <span>利益率</span>
+                    <span id="profitRate">-22.2%</span>
+                </div>
+                <div class="result-item">
+                    <span>損益分岐点</span>
+                    <span id="breakEven">92人</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="scenarios">
+            <h3>🎯 シナリオ分析</h3>
+            <div class="scenario-grid" id="scenarioGrid">
+            </div>
+        </div>
+        
+        <div id="recommendation"></div>
+    </div>
+
+    <script>
+        function calculate() {
+            const venueCost = parseInt(document.getElementById('venueCost').value);
+            const ticketPrice = parseInt(document.getElementById('ticketPrice').value);
+            const audience = parseInt(document.getElementById('audience').value);
+            const performers = parseInt(document.getElementById('performers').value);
+            const performerFee = parseInt(document.getElementById('performerFee').value);
+            
+            // 収入計算
+            const ticketRevenue = ticketPrice * audience;
+            let performerRevenue = 0;
+            let totalPerformerCost = 0;
+            
+            if (performerFee < 0) {
+                // 出演者から徴収する場合
+                performerRevenue = Math.abs(performerFee) * performers;
+                totalPerformerCost = 0;
+            } else {
+                // 出演者に支払う場合
+                performerRevenue = 0;
+                totalPerformerCost = performerFee * performers;
+            }
+            
+            const totalRevenue = ticketRevenue + performerRevenue;
+            
+            // 支出計算
+            const totalCost = venueCost + totalPerformerCost;
+            
+            // 損益計算
+            const profit = totalRevenue - totalCost;
+            const profitRate = totalRevenue > 0 ? ((profit / totalRevenue) * 100) : 0;
+            
+            // 損益分岐点計算（出演者収入も考慮）
+            const netCostPerTicket = ticketPrice + (performerFee < 0 ? Math.abs(performerFee) : 0);
+            const breakEven = Math.ceil((venueCost + (performerFee > 0 ? performerFee * performers : 0)) / netCostPerTicket);
+            
+            // 表示更新
+            document.getElementById('venueDisplay').textContent = `¥${venueCost.toLocaleString()}`;
+            document.getElementById('ticketRevenue').textContent = `¥${ticketRevenue.toLocaleString()}`;
+            
+            // 出演者からの収入がある場合の表示
+            if (performerRevenue > 0) {
+                document.getElementById('totalRevenue').innerHTML = `
+                    ¥${totalRevenue.toLocaleString()}<br>
+                    <small style="color: #666;">(チケット: ¥${ticketRevenue.toLocaleString()} + 出演者: ¥${performerRevenue.toLocaleString()})</small>
+                `;
+            } else {
+                document.getElementById('totalRevenue').textContent = `¥${totalRevenue.toLocaleString()}`;
+            }
+            
+            // 出演料の表示ラベルと金額を更新
+            const performerFeeLabel = document.getElementById('performerFeeLabel');
+            const totalPerformerFeeElement = document.getElementById('totalPerformerFee');
+            
+            if (performerFee < 0) {
+                performerFeeLabel.textContent = '出演者収入';
+                totalPerformerFeeElement.textContent = `+¥${performerRevenue.toLocaleString()}`;
+                totalPerformerFeeElement.style.color = '#28a745';
+            } else if (performerFee === 0) {
+                performerFeeLabel.textContent = '出演料';
+                totalPerformerFeeElement.textContent = '¥0';
+                totalPerformerFeeElement.style.color = '#6c757d';
+            } else {
+                performerFeeLabel.textContent = '出演料合計';
+                totalPerformerFeeElement.textContent = `¥${totalPerformerCost.toLocaleString()}`;
+                totalPerformerFeeElement.style.color = '#dc3545';
+            }
+            
+            document.getElementById('totalCost').textContent = `¥${totalCost.toLocaleString()}`;
+            
+            const profitElement = document.getElementById('profit');
+            profitElement.textContent = `¥${profit.toLocaleString()}`;
+            profitElement.className = profit > 0 ? 'profit' : profit < 0 ? 'loss' : 'break-even';
+            
+            document.getElementById('profitRate').textContent = `${profitRate.toFixed(1)}%`;
+            document.getElementById('breakEven').textContent = `${breakEven}人`;
+            
+            // シナリオ分析
+            generateScenarios(venueCost, ticketPrice, performers, performerFee);
+            
+            // 推奨事項
+            generateRecommendation(profit, breakEven, audience, performerFee, venueCost);
+        }
+        
+        function generateScenarios(venueCost, ticketPrice, performers, performerFee) {
+            const scenarios = [
+                { name: '最小ケース', audience: Math.ceil(performers * 0.8), performers: Math.ceil(performers * 0.8) },
+                { name: '平均ケース', audience: Math.ceil(performers * 1.5), performers: performers },
+                { name: '最大ケース', audience: Math.ceil(performers * 2.5), performers: Math.ceil(performers * 1.2) },
+                { name: '満席狙い', audience: Math.ceil(performers * 3), performers: Math.ceil(performers * 0.8) },
+                { name: 'コスト重視', audience: Math.ceil(performers * 1.5), performers: Math.ceil(performers * 0.8) },
+                { name: '出演者重視', audience: Math.ceil(performers * 1.2), performers: Math.ceil(performers * 1.2) }
+            ];
+            
+            const grid = document.getElementById('scenarioGrid');
+            grid.innerHTML = '';
+            
+            scenarios.forEach(scenario => {
+                const ticketRevenue = ticketPrice * scenario.audience;
+                let performerRevenue = 0;
+                let performerCost = 0;
+                
+                if (performerFee < 0) {
+                    performerRevenue = Math.abs(performerFee) * scenario.performers;
+                } else {
+                    performerCost = performerFee * scenario.performers;
+                }
+                
+                const totalRevenue = ticketRevenue + performerRevenue;
+                const cost = venueCost + performerCost;
+                const profit = totalRevenue - cost;
+                
+                const div = document.createElement('div');
+                div.className = 'scenario';
+                div.innerHTML = `
+                    <h4>${scenario.name}</h4>
+                    <div class="result-item">
+                        <span>集客</span>
+                        <span>${scenario.audience}人</span>
+                    </div>
+                    <div class="result-item">
+                        <span>出演者</span>
+                        <span>${scenario.performers}人</span>
+                    </div>
+                    <div class="result-item">
+                        <span>収入</span>
+                        <span>¥${totalRevenue.toLocaleString()}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>支出</span>
+                        <span>¥${cost.toLocaleString()}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>損益</span>
+                        <span class="${profit > 0 ? 'profit' : profit < 0 ? 'loss' : 'break-even'}">¥${profit.toLocaleString()}</span>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+        
+        function generateRecommendation(profit, breakEven, currentAudience, performerFee, venueCost) {
+            const recommendationDiv = document.getElementById('recommendation');
+            let message = '';
+            let className = '';
+            
+            if (profit > 0) {
+                if (performerFee < 0) {
+                    message = `✅ 出演者負担モデルで高い利益を確保！会場費¥${venueCost.toLocaleString()}に対して適切な収益構造です。`;
+                } else {
+                    message = `✅ 現在の設定で利益が出ています！会場費とのバランスが取れた継続可能なイベントです。`;
+                }
+                className = 'success';
+            } else if (breakEven <= currentAudience * 1.5) {
+                if (performerFee < 0) {
+                    message = `⚠️ 出演者負担モデルでも損益分岐点は${breakEven}人です。会場費¥${venueCost.toLocaleString()}に対して集客力向上が必要です。`;
+                } else {
+                    message = `⚠️ 損益分岐点は${breakEven}人です。出演者負担モデルの導入で会場費¥${venueCost.toLocaleString()}をより効率的にカバーできます。`;
+                }
+                className = 'warning';
+            } else {
+                if (venueCost > 150000) {
+                    message = `🚨 会場費¥${venueCost.toLocaleString()}が高すぎます。より安価な会場への変更、または出演者負担モデル（2,000-5,000円）の導入を強く推奨します。`;
+                } else {
+                    message = `🚨 現在の設定では採算が取れません。チケット価格の見直し、出演者負担の導入、または会場変更を検討してください。`;
+                }
+                className = 'warning';
+            }
+            
+            recommendationDiv.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+        
+        // 会場プリセット選択時の処理
+        function handleVenuePreset() {
+            const preset = document.getElementById('venuePreset').value;
+            if (preset) {
+                document.getElementById('venueCost').value = preset;
+                calculate();
+            }
+        }
+        
+        // イベントリスナー
+        document.getElementById('venueCost').addEventListener('input', calculate);
+        document.getElementById('ticketPrice').addEventListener('input', calculate);
+        document.getElementById('audience').addEventListener('input', calculate);
+        document.getElementById('performers').addEventListener('input', calculate);
+        document.getElementById('performerFee').addEventListener('change', calculate);
+        document.getElementById('venuePreset').addEventListener('change', handleVenuePreset);
+        
+        // 初期計算
+        calculate();
+    </script>
+</body>
+</html>
