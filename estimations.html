@@ -430,7 +430,7 @@
             </div>
             
             <div class="result-card">
-                <h3>🎸 バンド別分析</h3>
+                <h3>🎸 1バンドあたりの試算</h3>
                 <div class="result-item">
                     <span class="result-label">1バンドあたり必要集客</span>
                     <span class="result-value" id="perBandAudience">15人</span>
@@ -494,13 +494,13 @@
             document.getElementById('profitRate').textContent = `${profitRate.toFixed(1)}%`;
             document.getElementById('breakEven').textContent = `${breakEven}人`;
             
-            // バンド別分析の計算
+            // 1バンドあたりの試算を計算
             calculateBandAnalysis(venueCost, ticketPrice, audience, bandCount);
             
             generateRecommendation(profit, breakEven, audience, venueCost, bandCount);
         }
         
-        // バンド別分析の計算
+        // 1バンドあたりの試算を計算
         function calculateBandAnalysis(venueCost, ticketPrice, audience, bandCount) {
             // 1バンドあたりの必要集客数（現在の集客数をバンド数で割る）
             const perBandAudience = Math.ceil(audience / bandCount);
