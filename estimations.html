@@ -482,6 +482,8 @@
             <div class="control-card">
                 <label class="control-label" for="performerFee">💰 出演料金設定（バンド単価）</label>
                 <select id="performerFee" class="control-select">
+                    <option value="-30000">バンド負担 ¥30,000</option>
+                    <option value="-25000">バンド負担 ¥25,000</option>
                     <option value="-15000">バンド負担 ¥15,000</option>
                     <option value="-10000">バンド負担 ¥10,000</option>
                     <option value="-8000">バンド負担 ¥8,000</option>
@@ -494,19 +496,6 @@
                     <option value="15000">出演料 ¥15,000</option>
                     <option value="20000">出演料 ¥20,000</option>
                     <option value="25000">出演料 ¥25,000</option>
-                </select>
-            </div>
-            
-            <div class="control-card">
-                <label class="control-label" for="venuePreset">🏢 会場プリセット</label>
-                <select id="venuePreset" class="control-select">
-                    <option value="">カスタム設定</option>
-                    <option value="80000">小規模ライブハウス（50人）- ¥80,000</option>
-                    <option value="120000">中規模ライブハウス（100人）- ¥120,000</option>
-                    <option value="200000">大型ライブハウス（200人）- ¥200,000</option>
-                    <option value="300000">ホール・劇場（300人）- ¥300,000</option>
-                    <option value="150000">貸切バー・カフェ（80人）- ¥150,000</option>
-                    <option value="250000">イベントスペース（150人）- ¥250,000</option>
                 </select>
             </div>
         </div>
@@ -530,7 +519,7 @@
                     <span class="result-label">会場費</span>
                     <span class="result-value" id="venueDisplay">¥200,000</span>
                 </div>
-                <div class="result-item">
+                <div class="result-item" id="performerFeeRow">
                     <span class="result-label" id="performerFeeLabel">出演料合計</span>
                     <span class="result-value" id="totalPerformerFee">¥80,000</span>
                 </div>
@@ -573,8 +562,7 @@
             ticketPrice: document.getElementById('ticketPrice'),
             audience: document.getElementById('audience'),
             performers: document.getElementById('performers'),
-            performerFee: document.getElementById('performerFee'),
-            venuePreset: document.getElementById('venuePreset')
+            performerFee: document.getElementById('performerFee')
         };
 
         // 計算ロジック
@@ -623,16 +611,15 @@
             
             const performerFeeLabel = document.getElementById('performerFeeLabel');
             const totalPerformerFeeElement = document.getElementById('totalPerformerFee');
+            const performerFeeRow = document.getElementById('performerFeeRow');
             
             if (bandFee < 0) {
-                performerFeeLabel.textContent = 'バンド収入';
-                totalPerformerFeeElement.textContent = `+¥${bandRevenue.toLocaleString()}`;
-                totalPerformerFeeElement.className = 'result-value profit';
+                // バンド負担の場合は支出欄に表示しない
+                performerFeeRow.style.display = 'none';
             } else if (bandFee === 0) {
-                performerFeeLabel.textContent = '出演料';
-                totalPerformerFeeElement.textContent = '¥0';
-                totalPerformerFeeElement.className = 'result-value';
+                performerFeeRow.style.display = 'none';
             } else {
+                performerFeeRow.style.display = 'flex';
                 performerFeeLabel.textContent = '出演料合計';
                 totalPerformerFeeElement.textContent = `¥${totalBandCost.toLocaleString()}`;
                 totalPerformerFeeElement.className = 'result-value loss';
@@ -724,12 +711,12 @@
                 if (bandFee < 0) {
                     message = `⚡ バンド負担モデルでも損益分岐点は${breakEven}人です。会場費¥${venueCost.toLocaleString()}に対してもう少し集客力向上またはバンド負担額の調整が必要です。`;
                 } else {
-                    message = `🔥 損益分岐点は${breakEven}人です。バンド負担モデル（1バンドあたり¥5,000-15,000）の導入で会場費¥${venueCost.toLocaleString()}をより効率的にカバーできます。`;
+                    message = `🔥 損益分岐点は${breakEven}人です。バンド負担モデル（1バンドあたり¥5,000-30,000）の導入で会場費¥${venueCost.toLocaleString()}をより効率的にカバーできます。`;
                 }
                 className = 'warning';
             } else {
                 if (venueCost > 150000) {
-                    message = `⚠️ 会場費¥${venueCost.toLocaleString()}が高すぎます。より安価な会場への変更、または各バンドの負担額増加（¥10,000-15,000）を強く推奨します。`;
+                    message = `⚠️ 会場費¥${venueCost.toLocaleString()}が高すぎます。より安価な会場への変更、または各バンドの負担額増加（¥15,000-30,000）を強く推奨します。`;
                 } else {
                     message = `🚨 現在の設定では採算が取れません。チケット価格の見直し、バンド負担の導入、またはバンド数の調整を検討してください。`;
                 }
@@ -739,29 +726,18 @@
             recommendationDiv.innerHTML = `<div class="alert ${className}">${message}</div>`;
         }
 
-        // 会場プリセット選択時の処理
-        function handleVenuePreset() {
-            const preset = elements.venuePreset.value;
-            if (preset) {
-                elements.venueCost.value = preset;
-                calculate();
-            }
-        }
+
 
         // イベントリスナーの設定
         function setupEventListeners() {
             // 入力フィールドの監視
-            const inputFields = ['venueCost', 'ticketPrice', 'audience', 'performers', 'performerFee', 'venuePreset'];
+            const inputFields = ['venueCost', 'ticketPrice', 'audience', 'performers', 'performerFee'];
             
             inputFields.forEach(fieldName => {
                 const element = elements[fieldName];
                 
                 element.addEventListener('input', () => {
-                    if (fieldName === 'venuePreset') {
-                        handleVenuePreset();
-                    } else {
-                        calculate();
-                    }
+                    calculate();
                 });
             });
         }
