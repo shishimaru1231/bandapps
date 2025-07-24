@@ -249,98 +249,6 @@
             text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
         }
         
-        .scenarios-section {
-            margin-top: 80px;
-            background: rgba(255, 255, 255, 0.02);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 32px;
-            padding: 48px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .scenarios-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: conic-gradient(from 0deg at 50% 50%, transparent, rgba(78, 205, 196, 0.03), transparent);
-            animation: rotate 20s linear infinite;
-            pointer-events: none;
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        .scenarios-title {
-            font-size: 2rem;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 40px;
-            background: linear-gradient(135deg, #ffffff, #4ecdc4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .scenario-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .scenario-card {
-            background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 28px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .scenario-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .scenario-card:hover {
-            transform: translateY(-6px) scale(1.02);
-            border-color: rgba(78, 205, 196, 0.4);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
-        }
-        
-        .scenario-card:hover::before {
-            opacity: 1;
-        }
-        
-        .scenario-title {
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 20px;
-            color: #ffffff;
-            position: relative;
-            z-index: 1;
-        }
-        
         .recommendation {
             margin-top: 60px;
             position: relative;
@@ -542,12 +450,6 @@
             </div>
         </div>
         
-        <div class="scenarios-section">
-            <h3 class="scenarios-title">🎯 シナリオ分析</h3>
-            <div class="scenario-grid" id="scenarioGrid">
-            </div>
-        </div>
-        
         <div class="recommendation" id="recommendation"></div>
     </div>
 
@@ -595,7 +497,6 @@
             // バンド別分析の計算
             calculateBandAnalysis(venueCost, ticketPrice, audience, bandCount);
             
-            generateScenarios(venueCost, ticketPrice, bandCount);
             generateRecommendation(profit, breakEven, audience, venueCost, bandCount);
         }
         
@@ -621,54 +522,6 @@
             const perBandProfitElement = document.getElementById('perBandProfit');
             perBandProfitElement.textContent = `¥${perBandProfit.toLocaleString()}`;
             perBandProfitElement.className = `result-value ${perBandProfit > 0 ? 'profit' : perBandProfit < 0 ? 'loss' : 'break-even'}`;
-        }
-        
-        function generateScenarios(venueCost, ticketPrice, bandCount) {
-            const scenarios = [
-                { name: '🔹 最小ケース', audience: Math.ceil(bandCount * 8), bandCount: Math.max(1, Math.ceil(bandCount * 0.7)) },
-                { name: '🔸 平均ケース', audience: Math.ceil(bandCount * 12), bandCount: bandCount },
-                { name: '🔺 最大ケース', audience: Math.ceil(bandCount * 20), bandCount: Math.ceil(bandCount * 1.3) },
-                { name: '🎯 満席狙い', audience: Math.ceil(bandCount * 25), bandCount: Math.max(1, Math.ceil(bandCount * 0.8)) },
-                { name: '💡 コスト重視', audience: Math.ceil(bandCount * 15), bandCount: Math.max(1, Math.ceil(bandCount * 0.6)) },
-                { name: '🎸 バンド重視', audience: Math.ceil(bandCount * 10), bandCount: Math.ceil(bandCount * 1.5) }
-            ];
-            
-            const grid = document.getElementById('scenarioGrid');
-            grid.innerHTML = '';
-            
-            scenarios.forEach(scenario => {
-                const ticketRevenue = ticketPrice * scenario.audience;
-                const totalRevenue = ticketRevenue;
-                const cost = venueCost;
-                const profit = totalRevenue - cost;
-                
-                const div = document.createElement('div');
-                div.className = 'scenario-card';
-                div.innerHTML = `
-                    <h4 class="scenario-title">${scenario.name}</h4>
-                    <div class="result-item">
-                        <span class="result-label">集客</span>
-                        <span class="result-value">${scenario.audience}人</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">バンド数</span>
-                        <span class="result-value">${scenario.bandCount}組</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">収入</span>
-                        <span class="result-value">¥${totalRevenue.toLocaleString()}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">支出</span>
-                        <span class="result-value">¥${cost.toLocaleString()}</span>
-                    </div>
-                    <div class="result-item">
-                        <span class="result-label">損益</span>
-                        <span class="result-value ${profit > 0 ? 'profit' : profit < 0 ? 'loss' : 'break-even'}">¥${profit.toLocaleString()}</span>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
         }
         
         function generateRecommendation(profit, breakEven, currentAudience, venueCost, bandCount) {
