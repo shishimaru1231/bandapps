@@ -160,7 +160,7 @@
         
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 30px;
             margin-bottom: 60px;
         }
@@ -478,26 +478,6 @@
                 <label class="control-label" for="performers">🎸 出演バンド数</label>
                 <input type="number" id="performers" class="control-input" value="5" min="1" max="20" step="1">
             </div>
-            
-            <div class="control-card">
-                <label class="control-label" for="performerFee">💰 出演料金設定（バンド単価）</label>
-                <select id="performerFee" class="control-select">
-                    <option value="-30000">バンド負担 ¥30,000</option>
-                    <option value="-25000">バンド負担 ¥25,000</option>
-                    <option value="-15000">バンド負担 ¥15,000</option>
-                    <option value="-10000">バンド負担 ¥10,000</option>
-                    <option value="-8000">バンド負担 ¥8,000</option>
-                    <option value="-5000">バンド負担 ¥5,000</option>
-                    <option value="-3000">バンド負担 ¥3,000</option>
-                    <option value="0" selected>無料出演</option>
-                    <option value="5000">出演料 ¥5,000</option>
-                    <option value="8000">出演料 ¥8,000</option>
-                    <option value="10000">出演料 ¥10,000</option>
-                    <option value="15000">出演料 ¥15,000</option>
-                    <option value="20000">出演料 ¥20,000</option>
-                    <option value="25000">出演料 ¥25,000</option>
-                </select>
-            </div>
         </div>
         
         <div class="results-grid">
@@ -519,13 +499,9 @@
                     <span class="result-label">会場費</span>
                     <span class="result-value" id="venueDisplay">¥200,000</span>
                 </div>
-                <div class="result-item" id="performerFeeRow">
-                    <span class="result-label" id="performerFeeLabel">出演料合計</span>
-                    <span class="result-value" id="totalPerformerFee">¥80,000</span>
-                </div>
                 <div class="result-item">
                     <span class="result-label">合計支出</span>
-                    <span class="result-value" id="totalCost">¥280,000</span>
+                    <span class="result-value" id="totalCost">¥200,000</span>
                 </div>
             </div>
             
@@ -533,15 +509,35 @@
                 <h3>🎯 収支結果</h3>
                 <div class="result-item">
                     <span class="result-label">損益</span>
-                    <span class="result-value" id="profit">-¥55,000</span>
+                    <span class="result-value" id="profit">¥25,000</span>
                 </div>
                 <div class="result-item">
                     <span class="result-label">利益率</span>
-                    <span class="result-value" id="profitRate">-24.4%</span>
+                    <span class="result-value" id="profitRate">11.1%</span>
                 </div>
                 <div class="result-item">
                     <span class="result-label">損益分岐点</span>
-                    <span class="result-value" id="breakEven">94人</span>
+                    <span class="result-value" id="breakEven">67人</span>
+                </div>
+            </div>
+            
+            <div class="result-card">
+                <h3>🎸 バンド別分析</h3>
+                <div class="result-item">
+                    <span class="result-label">1バンドあたり必要集客</span>
+                    <span class="result-value" id="perBandAudience">15人</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">1バンドあたりチケット売上</span>
+                    <span class="result-value" id="perBandTicketRevenue">¥45,000</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">1バンドあたり会場費負担</span>
+                    <span class="result-value" id="perBandVenueCost">¥40,000</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">1バンドあたり収支</span>
+                    <span class="result-value" id="perBandProfit">¥5,000</span>
                 </div>
             </div>
         </div>
@@ -561,8 +557,7 @@
             venueCost: document.getElementById('venueCost'),
             ticketPrice: document.getElementById('ticketPrice'),
             audience: document.getElementById('audience'),
-            performers: document.getElementById('performers'),
-            performerFee: document.getElementById('performerFee')
+            performers: document.getElementById('performers')
         };
 
         // 計算ロジック
@@ -570,61 +565,24 @@
             const venueCost = parseInt(elements.venueCost.value);
             const ticketPrice = parseInt(elements.ticketPrice.value);
             const audience = parseInt(elements.audience.value);
-            const bandCount = parseInt(elements.performers.value); // バンド数
-            const bandFee = parseInt(elements.performerFee.value); // バンド単価
+            const bandCount = parseInt(elements.performers.value);
             
             // 収入計算
             const ticketRevenue = ticketPrice * audience;
-            let bandRevenue = 0;
-            let totalBandCost = 0;
+            const totalRevenue = ticketRevenue;
             
-            if (bandFee < 0) {
-                // バンドから徴収する場合
-                bandRevenue = Math.abs(bandFee) * bandCount;
-                totalBandCost = 0;
-            } else {
-                // バンドに支払う場合
-                bandRevenue = 0;
-                totalBandCost = bandFee * bandCount;
-            }
-            
-            const totalRevenue = ticketRevenue + bandRevenue;
-            const totalCost = venueCost + totalBandCost;
+            // 支出計算（会場費のみ）
+            const totalCost = venueCost;
             const profit = totalRevenue - totalCost;
             const profitRate = totalRevenue > 0 ? ((profit / totalRevenue) * 100) : 0;
             
-            const netCostPerTicket = ticketPrice + (bandFee < 0 ? Math.abs(bandFee) : 0);
-            const breakEven = Math.ceil((venueCost + (bandFee > 0 ? bandFee * bandCount : 0)) / netCostPerTicket);
+            // 損益分岐点計算
+            const breakEven = Math.ceil(venueCost / ticketPrice);
             
             // 表示更新
             document.getElementById('venueDisplay').textContent = `¥${venueCost.toLocaleString()}`;
             document.getElementById('ticketRevenue').textContent = `¥${ticketRevenue.toLocaleString()}`;
-            
-            if (bandRevenue > 0) {
-                document.getElementById('totalRevenue').innerHTML = `
-                    ¥${totalRevenue.toLocaleString()}<br>
-                    <small style="color: #888; font-size: 0.8rem;">(チケット: ¥${ticketRevenue.toLocaleString()} + バンド: ¥${bandRevenue.toLocaleString()})</small>
-                `;
-            } else {
-                document.getElementById('totalRevenue').textContent = `¥${totalRevenue.toLocaleString()}`;
-            }
-            
-            const performerFeeLabel = document.getElementById('performerFeeLabel');
-            const totalPerformerFeeElement = document.getElementById('totalPerformerFee');
-            const performerFeeRow = document.getElementById('performerFeeRow');
-            
-            if (bandFee < 0) {
-                // バンド負担の場合は支出欄に表示しない
-                performerFeeRow.style.display = 'none';
-            } else if (bandFee === 0) {
-                performerFeeRow.style.display = 'none';
-            } else {
-                performerFeeRow.style.display = 'flex';
-                performerFeeLabel.textContent = '出演料合計';
-                totalPerformerFeeElement.textContent = `¥${totalBandCost.toLocaleString()}`;
-                totalPerformerFeeElement.className = 'result-value loss';
-            }
-            
+            document.getElementById('totalRevenue').textContent = `¥${totalRevenue.toLocaleString()}`;
             document.getElementById('totalCost').textContent = `¥${totalCost.toLocaleString()}`;
             
             const profitElement = document.getElementById('profit');
@@ -634,11 +592,38 @@
             document.getElementById('profitRate').textContent = `${profitRate.toFixed(1)}%`;
             document.getElementById('breakEven').textContent = `${breakEven}人`;
             
-            generateScenarios(venueCost, ticketPrice, bandCount, bandFee);
-            generateRecommendation(profit, breakEven, audience, bandFee, venueCost);
+            // バンド別分析の計算
+            calculateBandAnalysis(venueCost, ticketPrice, audience, bandCount);
+            
+            generateScenarios(venueCost, ticketPrice, bandCount);
+            generateRecommendation(profit, breakEven, audience, venueCost, bandCount);
         }
         
-        function generateScenarios(venueCost, ticketPrice, bandCount, bandFee) {
+        // バンド別分析の計算
+        function calculateBandAnalysis(venueCost, ticketPrice, audience, bandCount) {
+            // 1バンドあたりの必要集客数（現在の集客数をバンド数で割る）
+            const perBandAudience = Math.ceil(audience / bandCount);
+            
+            // 1バンドあたりのチケット売上
+            const perBandTicketRevenue = ticketPrice * perBandAudience;
+            
+            // 1バンドあたりの会場費負担
+            const perBandVenueCost = Math.ceil(venueCost / bandCount);
+            
+            // 1バンドあたりの収支（チケット売上 - 会場費負担）
+            const perBandProfit = perBandTicketRevenue - perBandVenueCost;
+            
+            // 表示更新
+            document.getElementById('perBandAudience').textContent = `${perBandAudience}人`;
+            document.getElementById('perBandTicketRevenue').textContent = `¥${perBandTicketRevenue.toLocaleString()}`;
+            document.getElementById('perBandVenueCost').textContent = `¥${perBandVenueCost.toLocaleString()}`;
+            
+            const perBandProfitElement = document.getElementById('perBandProfit');
+            perBandProfitElement.textContent = `¥${perBandProfit.toLocaleString()}`;
+            perBandProfitElement.className = `result-value ${perBandProfit > 0 ? 'profit' : perBandProfit < 0 ? 'loss' : 'break-even'}`;
+        }
+        
+        function generateScenarios(venueCost, ticketPrice, bandCount) {
             const scenarios = [
                 { name: '🔹 最小ケース', audience: Math.ceil(bandCount * 8), bandCount: Math.max(1, Math.ceil(bandCount * 0.7)) },
                 { name: '🔸 平均ケース', audience: Math.ceil(bandCount * 12), bandCount: bandCount },
@@ -653,17 +638,8 @@
             
             scenarios.forEach(scenario => {
                 const ticketRevenue = ticketPrice * scenario.audience;
-                let bandRevenue = 0;
-                let bandCost = 0;
-                
-                if (bandFee < 0) {
-                    bandRevenue = Math.abs(bandFee) * scenario.bandCount;
-                } else {
-                    bandCost = bandFee * scenario.bandCount;
-                }
-                
-                const totalRevenue = ticketRevenue + bandRevenue;
-                const cost = venueCost + bandCost;
+                const totalRevenue = ticketRevenue;
+                const cost = venueCost;
                 const profit = totalRevenue - cost;
                 
                 const div = document.createElement('div');
@@ -695,30 +671,26 @@
             });
         }
         
-        function generateRecommendation(profit, breakEven, currentAudience, bandFee, venueCost) {
+        function generateRecommendation(profit, breakEven, currentAudience, venueCost, bandCount) {
             const recommendationDiv = document.getElementById('recommendation');
             let message = '';
             let className = '';
             
             if (profit > 0) {
-                if (bandFee < 0) {
-                    message = `✨ バンド負担モデルで高い利益を確保！会場費¥${venueCost.toLocaleString()}に対して優秀な収益構造です。各バンドが¥${Math.abs(bandFee).toLocaleString()}負担することで持続可能なイベント運営が期待できます。`;
-                } else {
-                    message = `🎉 現在の設定で利益が出ています！各バンドに¥${bandFee.toLocaleString()}の出演料を支払いながら会場費とのバランスが取れた継続可能なイベント設計です。`;
-                }
+                message = `🎉 現在の設定で¥${profit.toLocaleString()}の利益が出ています！チケット収入だけで会場費をカバーできる健全な企画です。各バンドの負担なしで運営可能です。`;
                 className = 'success';
             } else if (breakEven <= currentAudience * 1.5) {
-                if (bandFee < 0) {
-                    message = `⚡ バンド負担モデルでも損益分岐点は${breakEven}人です。会場費¥${venueCost.toLocaleString()}に対してもう少し集客力向上またはバンド負担額の調整が必要です。`;
-                } else {
-                    message = `🔥 損益分岐点は${breakEven}人です。バンド負担モデル（1バンドあたり¥5,000-30,000）の導入で会場費¥${venueCost.toLocaleString()}をより効率的にカバーできます。`;
-                }
+                message = `⚡ 損益分岐点は${breakEven}人です。あと${Math.max(0, breakEven - currentAudience)}人の集客でチケット収入のみで黒字化できます。`;
                 className = 'warning';
             } else {
-                if (venueCost > 150000) {
-                    message = `⚠️ 会場費¥${venueCost.toLocaleString()}が高すぎます。より安価な会場への変更、または各バンドの負担額増加（¥15,000-30,000）を強く推奨します。`;
+                const ticketRevenue = parseInt(elements.ticketPrice.value) * currentAudience;
+                const shortfall = Math.max(0, venueCost - ticketRevenue);
+                const perBandShortfall = Math.ceil(shortfall / bandCount);
+                
+                if (venueCost > 200000) {
+                    message = `⚠️ 会場費¥${venueCost.toLocaleString()}に対して集客${currentAudience}人では厳しい状況です。より安価な会場への変更、または各バンドが¥${perBandShortfall.toLocaleString()}負担することを推奨します。`;
                 } else {
-                    message = `🚨 現在の設定では採算が取れません。チケット価格の見直し、バンド負担の導入、またはバンド数の調整を検討してください。`;
+                    message = `🚨 現在の設定では¥${Math.abs(profit).toLocaleString()}の赤字です。チケット価格の見直し、集客増加、またはバンド負担（1バンドあたり¥${perBandShortfall.toLocaleString()}）の導入を検討してください。`;
                 }
                 className = 'warning';
             }
@@ -731,7 +703,7 @@
         // イベントリスナーの設定
         function setupEventListeners() {
             // 入力フィールドの監視
-            const inputFields = ['venueCost', 'ticketPrice', 'audience', 'performers', 'performerFee'];
+            const inputFields = ['venueCost', 'ticketPrice', 'audience', 'performers'];
             
             inputFields.forEach(fieldName => {
                 const element = elements[fieldName];
